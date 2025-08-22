@@ -5,6 +5,7 @@
 
 void rom_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value)
 {
+    // no writes to mbc none
 }
 
 uint8_t rom_read_mbc_none(Memory* memory, uint16_t addr)
@@ -14,6 +15,32 @@ uint8_t rom_read_mbc_none(Memory* memory, uint16_t addr)
 
 void rom_write_mbc1(Memory* memory, uint16_t addr, uint8_t value)
 {
+    if (addr <= 0x1FFF)
+    {
+        memory->mbc.ram_enabled = (value & 0x0F) == 0x0A;
+    }
+    else if (addr <= 0x3FFF)
+    {
+        uint8_t rom_size_code = memory->rom[0x148];
+        uint8_t mask = (2 << rom_size_code) - 1;
+
+        memory->mbc.rom_bank = (value & 0x1F) & mask;
+
+        // for MBC1, bank 0 is normally translated to bank 1 in the switchable ROM area.
+        // however, the original MBC1 chips have a 5-bit trick: if a cartridge uses only 4 bits (16 banks),
+        // the highest bit (5th bit) is ignored and switching to bank 0 would be possible in this scenario.
+        // e.g.: 0b10000 -> 0b0000
+        // this simplification ignores it.
+        memory->mbc.rom_bank = memory->mbc.rom_bank == 0 ? 1 : memory->mbc.rom_bank;
+    }
+    else if (addr <= 0x5FFF)
+    {
+        memory->mbc.ram_bank = value & 0x03;
+    }
+    else if (addr <= 0x7FFF)
+    {
+        memory->mbc.banking_mode = value & 0x01;
+    }
 }
 
 uint8_t rom_read_mbc1(Memory* memory, uint16_t addr)
