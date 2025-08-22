@@ -1,2 +1,2 @@
 all:
-	gcc src/main.c -o oamx.exe
+	gcc src/main.c src/mbc.c -o oamx.exe

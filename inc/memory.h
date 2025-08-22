@@ -5,7 +5,7 @@
 
 #include "mbc.h"
 
-typedef struct {
+typedef struct Memory {
     uint8_t rom[0x80000]; // 512 KB para suportar jogos grandes, acesso é feito via mbc usando o banco ativo para calcular o offset
     uint8_t sram[0x8000];
 
