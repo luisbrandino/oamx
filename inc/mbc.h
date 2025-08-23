@@ -28,7 +28,7 @@ void rom_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value);
 uint8_t rom_read_mbc_none(Memory* memory, uint16_t addr);
 
 void ram_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value);
-void ram_read_mbc_none(Memory* memory, uint16_t addr);
+uint8_t ram_read_mbc_none(Memory* memory, uint16_t addr);
 
 void rom_write_mbc1(Memory* memory, uint16_t addr, uint8_t value);
 uint8_t rom_read_mbc1(Memory* memory, uint16_t addr);

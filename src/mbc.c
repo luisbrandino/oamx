@@ -5,12 +5,31 @@
 
 void rom_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value)
 {
-    // no writes to mbc none
+    // no writes to rom for mbc none
 }
 
 uint8_t rom_read_mbc_none(Memory* memory, uint16_t addr)
 {
     return memory->rom[addr];    
+}
+
+// some cartridges without an MBC chip may include a fixed 8 KB SRAM at $A000–$BFFF.
+// in this case, the game code can read/write this RAM, even without banking logic.
+// most MBC-less cartridges, however, do not have external RAM, so accesses to this area would do nothing.
+void ram_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value)
+{
+    if (addr < 0xA000 || addr > 0xBFFF)
+        return;
+
+    memory->sram[addr - 0xA000] = value;
+}
+
+uint8_t ram_read_mbc_none(Memory* memory, uint16_t addr)
+{
+    if (addr < 0xA000 || addr > 0xBFFF)
+        return 0xFF;
+
+    return memory->sram[addr - 0xA000];
 }
 
 void rom_write_mbc1(Memory* memory, uint16_t addr, uint8_t value)
@@ -64,4 +83,30 @@ uint8_t rom_read_mbc1(Memory* memory, uint16_t addr)
     uint32_t final_addr = 0x4000 * bank + (addr - 0x4000);
 
     return memory->rom[final_addr];
+}
+
+void ram_write_mbc1(Memory* memory, uint16_t addr, uint8_t value)
+{
+    if (addr < 0xA000 || addr > 0xBFFF)
+        return;
+
+    if (memory->mbc.ram_enabled == 0)
+        return;
+
+    uint16_t offset = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
+
+    memory->sram[offset] = value;
+}
+
+uint8_t ram_read_mbc1(Memory* memory, uint16_t addr)
+{
+    if (addr < 0xA000 || addr > 0xBFFF)
+        return 0xFF;
+
+    if (memory->mbc.ram_enabled == 0)
+        return 0xFF;
+
+    uint16_t offset = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
+    
+    return memory->sram[offset];
 }
