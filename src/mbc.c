@@ -41,7 +41,7 @@ void rom_write_mbc1(Memory* memory, uint16_t addr, uint8_t value)
     else if (addr <= 0x3FFF)
     {
         uint8_t rom_size_code = memory->rom[0x148];
-        uint8_t mask = 2 << rom_size_code;
+        uint8_t mask = (2 << rom_size_code) - 1;
 
         memory->mbc.rom_bank = (value & 0x1F) & mask;
 

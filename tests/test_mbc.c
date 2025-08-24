@@ -16,7 +16,7 @@ void test_mbc1_rom_bank_switch_no_banking_mode()
         for (size_t j = 0; j < total_banks*2; j++)
         {
             memory_write(mem, 0x2000, j);
-            assert(mem->mbc.rom_bank == j % total_banks > 0 ? j % total_banks : 1);   
+            assert(mem->mbc.rom_bank == ((j % total_banks > 0) ? (j % total_banks) : 1));   
         }
     }
 
