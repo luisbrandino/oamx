@@ -20,10 +20,12 @@ typedef struct Memory {
     MBC mbc;
 } Memory;
 
-void memory_write(Memory* memory, uint16_t address, uint8_t value);
-uint8_t memory_read(Memory* memory, uint16_t address);
+void memory_write(Memory* mem, uint16_t addr, uint8_t value);
+uint8_t memory_read(Memory* mem, uint16_t addr);
 
-void memory_write16(Memory* memory, uint16_t address, uint16_t value);
-uint16_t memory_read16(Memory* memory, uint16_t address);
+void memory_write16(Memory* mem, uint16_t addr, uint16_t value);
+uint16_t memory_read16(Memory* mem, uint16_t addr);
+
+Memory* memory_init();
 
 #endif

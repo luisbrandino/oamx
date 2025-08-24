@@ -5,7 +5,7 @@
 
 typedef struct Memory Memory; 
 
-typedef enum {
+typedef enum MBCType {
     MBC_NONE,
     MBC1
 } MBCType;
@@ -17,11 +17,11 @@ typedef struct MBC {
     uint8_t ram_enabled;
     uint8_t banking_mode;
 
-        void (*rom_write)(Memory* memory, uint16_t addr, uint8_t value);
-        uint8_t (*rom_read)(Memory* memory, uint16_t addr);
+    void (*rom_write)(Memory* memory, uint16_t addr, uint8_t value);
+    uint8_t (*rom_read)(Memory* memory, uint16_t addr);
 
-        void (*ram_write)(Memory* memory, uint16_t addr, uint8_t value);
-        uint8_t (*ram_read)(Memory* memory, uint16_t addr);
+    void (*ram_write)(Memory* memory, uint16_t addr, uint8_t value);
+    uint8_t (*ram_read)(Memory* memory, uint16_t addr);
 } MBC;
 
 void rom_write_mbc_none(Memory* memory, uint16_t addr, uint8_t value);

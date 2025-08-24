@@ -2,6 +2,10 @@
     "files.associations": {
         "*.ejs": "html",
         "memory.h": "c",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "assert.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c"
     }
 }
