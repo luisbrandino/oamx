@@ -26,6 +26,19 @@ void test_mbc1_rom_bank_switch_no_banking_mode()
     free(mem);
 }
 
+void test_mbc1_banking_mode_enable()
+{
+    Memory *mem = memory_init();
+
+    memory_write(mem, 0x6000, 0x01);
+    assert(mem->mbc.banking_mode == 1);
+
+    memory_write(mem, 0x6000, 0x00);
+    assert(mem->mbc.banking_mode == 0);
+
+    free(mem);
+}
+
 void test_mbc1_ram_enable()
 {
     Memory *mem = memory_init();
@@ -39,12 +52,27 @@ void test_mbc1_ram_enable()
     free(mem);
 }
 
+void test_mbc1_ram_bank_switch()
+{
+    Memory *mem = memory_init();
+    
+    for (size_t i = 0; i < 4; i++)
+    {
+        memory_write(mem, 0x4000, i);
+        assert(mem->mbc.ram_bank == i);  
+    }
+
+    free(mem);
+}
+
 int main()
 {
     printf("Running MBC tests...\n");
 
     test_mbc1_rom_bank_switch_no_banking_mode();
+    test_mbc1_banking_mode_enable();
     test_mbc1_ram_enable();
+    test_mbc1_ram_bank_switch();
 
     printf("All MBC tests passed!\n");
 
