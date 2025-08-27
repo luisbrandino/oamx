@@ -33,12 +33,29 @@ Memory* memory_init()
     Memory *mem = (Memory*) malloc(sizeof(Memory));
     memset(mem, 0, sizeof(Memory));
 
-    // for the sake of simplicity
-    mem->mbc.mbc_type = MBC1;
-    mem->mbc.rom_write = rom_write_mbc1;
-    mem->mbc.rom_read = rom_read_mbc1;
-    mem->mbc.ram_write = ram_write_mbc1;
-    mem->mbc.ram_read = ram_read_mbc1;
+    set_mbc_type(mem, MBC1);
 
     return mem;
+}
+
+void set_mbc_type(Memory* mem, MBCType type)
+{
+    if (mem->mbc.mbc_type == type)
+        return;
+
+    if (type == MBC_NONE)
+    {
+        mem->mbc.mbc_type = MBC_NONE;
+        mem->mbc.rom_write = rom_write_mbc_none;
+        mem->mbc.rom_read = rom_read_mbc_none;
+        mem->mbc.ram_write = ram_write_mbc_none;
+        mem->mbc.ram_read = ram_read_mbc_none;
+    } else if (type == MBC1)
+    {
+        mem->mbc.mbc_type = MBC1;
+        mem->mbc.rom_write = rom_write_mbc1;
+        mem->mbc.rom_read = rom_read_mbc1;
+        mem->mbc.ram_write = ram_write_mbc1;
+        mem->mbc.ram_read = ram_read_mbc1;
+    }
 }
