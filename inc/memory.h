@@ -6,10 +6,10 @@
 #include "mbc.h"
 
 typedef struct Memory {
-    uint8_t rom[0x80000]; // 512 KB para suportar jogos grandes, acesso é feito via mbc usando o banco ativo para calcular o offset
+    uint8_t rom[0x200000]; // 2MB: covers all possible 128 ROM banks for MBC1 (5-bit ROM bank + 2-bit RAM bank in ROM mode)
     uint8_t sram[0x8000];
 
-    uint8_t vram[0x2000]; // (tela, tiles, background, window)
+    uint8_t vram[0x2000];
     uint8_t wram0[0x1000];
     uint8_t wram1[0x1000];
     uint8_t oam[0xA0];
@@ -27,5 +27,7 @@ void memory_write16(Memory* mem, uint16_t addr, uint16_t value);
 uint16_t memory_read16(Memory* mem, uint16_t addr);
 
 Memory* memory_init();
+
+void set_mbc_type(Memory* mem, MBCType mbcType);
 
 #endif
