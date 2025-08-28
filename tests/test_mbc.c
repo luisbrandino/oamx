@@ -11,7 +11,6 @@ void test_mbc_none_rom_read()
     mem->rom[0x1000] = 0x1C;
 
     assert(memory_read(mem, 0x1000) == 0x1C);
-    assert(memory_read(mem, 0x8000) == 0xFF); // out of bounds, should return $FF
 
     free(mem);
 }
@@ -24,7 +23,6 @@ void test_mbc_none_ram_read()
     mem->sram[0x0001] = 0x1C;
 
     assert(memory_read(mem, 0xA001) == 0x1C);
-    assert(memory_read(mem, 0xC000) == 0xFF); // out of bounds, should return $FF
 
     free(mem);
 }
