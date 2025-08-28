@@ -98,9 +98,15 @@ void ram_write_mbc1(Memory* memory, uint16_t addr, uint8_t value)
     if (memory->mbc.ram_enabled == 0)
         return;
 
-    uint16_t offset = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
+    if (memory->mbc.banking_mode == 0)
+    {
+        memory->sram[addr - 0xA000] = value;
+        return;
+    }
 
-    memory->sram[offset] = value;
+    uint16_t final_addr = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
+
+    memory->sram[final_addr] = value;
 }
 
 uint8_t ram_read_mbc1(Memory* memory, uint16_t addr)
@@ -111,7 +117,10 @@ uint8_t ram_read_mbc1(Memory* memory, uint16_t addr)
     if (memory->mbc.ram_enabled == 0)
         return 0xFF;
 
-    uint16_t offset = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
-    
-    return memory->sram[offset];
+    if (memory->mbc.banking_mode == 0)
+        return memory->sram[addr - 0xA000];
+
+    uint16_t final_addr = memory->mbc.ram_bank * 0x2000 + (addr - 0xA000);
+
+    return memory->sram[final_addr];
 }
