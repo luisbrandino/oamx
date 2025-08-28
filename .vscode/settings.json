@@ -8,6 +8,7 @@
         "stdlib.h": "c",
         "string.h": "c",
         "compare": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "mbc.h": "c"
     }
 }

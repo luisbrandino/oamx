@@ -11,8 +11,20 @@ void test_mbc_none_rom_read()
     mem->rom[0x1000] = 0x1C;
 
     assert(memory_read(mem, 0x1000) == 0x1C);
-
     assert(memory_read(mem, 0x8000) == 0xFF); // out of bounds, should return $FF
+
+    free(mem);
+}
+
+void test_mbc_none_ram_read()
+{
+    Memory *mem = memory_init();
+    set_mbc_type(mem, MBC_NONE);
+
+    mem->sram[0x0001] = 0x1C;
+
+    assert(memory_read(mem, 0xA001) == 0x1C);
+    assert(memory_read(mem, 0xC000) == 0xFF); // out of bounds, should return $FF
 
     free(mem);
 }
@@ -73,6 +85,37 @@ void test_mbc1_rom_read()
                 mem->rom[0x4000 * combined_bank + (addr - 0x4000)] = 0x0;
             }
         }
+    }
+
+    free(mem);
+}
+
+void test_mbc1_ram_read()
+{
+    Memory *mem = memory_init();
+    set_mbc_type(mem, MBC1);
+
+    // disable ram
+    memory_write(mem, 0x0000, 0x00);
+
+    assert(memory_read(mem, 0xA000) == 0xFF);
+
+    // enable ram
+    memory_write(mem, 0x0000, 0x0A);
+
+    // set banking mode to 1
+    memory_write(mem, 0x6000, 0x01);
+
+    for (size_t ram_bank = 0; ram_bank < 4; ram_bank++)
+    {
+        memory_write(mem, 0x4000, ram_bank);
+        assert(mem->mbc.ram_bank == ram_bank);
+
+        uint16_t addr = 0xA001;
+
+        mem->sram[0x2000 * ram_bank + (addr - 0xA000)] = 0x1C;
+        assert(memory_read(mem, addr) == 0x1C);
+        mem->sram[0x2000 * ram_bank + (addr - 0xA000)] = 0x0;
     }
 
     free(mem);
@@ -152,7 +195,9 @@ int main()
     printf("Running MBC tests...\n");
 
     test_mbc_none_rom_read();
+    test_mbc_none_ram_read();
     test_mbc1_rom_read();
+    test_mbc1_ram_read();
     test_mbc1_rom_bank_switch_no_banking_mode();
     test_mbc1_banking_mode_enable();
     test_mbc1_ram_enable();
