@@ -190,8 +190,6 @@ void test_mbc1_ram_bank_switch()
 
 int main()
 {
-    printf("Running MBC tests...\n");
-
     test_mbc_none_rom_read();
     test_mbc_none_ram_read();
     test_mbc1_rom_read();
@@ -201,7 +199,5 @@ int main()
     test_mbc1_ram_enable();
     test_mbc1_ram_bank_switch();
 
-    printf("All MBC tests passed!\n");
-
-    return 0;
+    return EXIT_SUCCESS;
 }
