@@ -7,9 +7,18 @@ void test_memory_vram_write_and_read()
 {
     Memory *mem = memory_init();
 
+    // enable vram write/read
+    memory_write(mem, 0xFF40, 0x80);
+    memory_write(mem, 0xFF41, 0x1);
+
     memory_write(mem, 0x8000, 0x1C);
     assert(memory_read(mem, 0x8000) == 0x1C);
     assert(mem->vram[0x0000] == 0x1C);
+
+    // disable vram write/read (should return 0xFF)
+    memory_write(mem, 0xFF40, 0x0);
+    memory_write(mem, 0xFF41, 0x3);
+    assert(memory_read(mem, 0x8000) == 0xFF);
 
     free(mem);
 }
@@ -57,9 +66,16 @@ void test_memory_oam_write_and_read()
 {
     Memory *mem = memory_init();
 
+    // set lcd mode to 1 so it can access oam
+    memory_write(mem, 0xFF41, 0x01);
+
     memory_write(mem, 0xFE00, 0x1C);
     assert(memory_read(mem, 0xFE00) == 0x1C);
     assert(mem->oam[0x0000] == 0x1C);
+
+    // set lcd mode to 3 so it cannot access oam, should return 0xFF
+    memory_write(mem, 0xFF41, 0x03);
+    assert(memory_read(mem, 0xFE00) == 0xFF);
 
     free(mem);
 }
@@ -110,10 +126,10 @@ void test_memory_write16_and_read16()
 {
     Memory *mem = memory_init();
 
-    memory_write16(mem, 0x8000, 0x2080);
-    assert(memory_read16(mem, 0x8000) == 0x2080);
-    assert(mem->vram[0x0000] == 0x80);
-    assert(mem->vram[0x0001] == 0x20);
+    memory_write16(mem, 0xC000, 0x2080);
+    assert(memory_read16(mem, 0xC000) == 0x2080);
+    assert(mem->wram0[0x0000] == 0x80);
+    assert(mem->wram0[0x0001] == 0x20);
 
     free(mem);
 }
