@@ -2,6 +2,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+int can_access_vram(Memory* mem)
+{
+    uint8_t lcdc = mem->io[0x40];
+    uint8_t stat = mem->io[0x41];
+
+    uint8_t lcd_enabled = lcdc & (1 << 7);
+    uint8_t lcd_mode = stat & 0x03;
+
+    return lcd_enabled == 0x80 && (lcd_mode != 0x03);
+}
+
+int can_access_oam(Memory* mem)
+{
+    uint8_t stat = mem->io[0x41];
+    uint8_t lcd_mode = stat & 0x03;
+
+    return lcd_mode != 0x02 && lcd_mode != 0x03;
+}
+
 void memory_write(Memory* mem, uint16_t addr, uint8_t value)
 {
     if (addr <= 0x7FFF)
@@ -10,7 +29,8 @@ void memory_write(Memory* mem, uint16_t addr, uint8_t value)
     }
     else if (addr <= 0x9FFF)
     {
-        mem->vram[addr - 0x8000] = value;
+        if (can_access_vram(mem))
+            mem->vram[addr - 0x8000] = value;
     }
     else if (addr <= 0xBFFF)
     {
@@ -38,7 +58,8 @@ void memory_write(Memory* mem, uint16_t addr, uint8_t value)
     }
     else if (addr <= 0xFE9F)
     {
-        mem->oam[addr - 0xFE00] = value;
+        if (can_access_oam(mem))
+            mem->oam[addr - 0xFE00] = value;
     }
     else if (addr <= 0xFEFF)
     {
@@ -67,7 +88,10 @@ uint8_t memory_read(Memory* mem, uint16_t addr)
     else if (addr <= 0x9FFF)
     {
         // if this ever evolves to CGB, vram has switchable banks 0/1
-        return mem->vram[addr - 0x8000];
+        if (can_access_vram(mem))
+            return mem->vram[addr - 0x8000];
+    
+        return 0xFF;
     }
     else if (addr <= 0xBFFF)
     {
@@ -93,7 +117,10 @@ uint8_t memory_read(Memory* mem, uint16_t addr)
     }
     else if (addr <= 0xFE9F)
     {
-        return mem->oam[addr - 0xFE00];
+        if (can_access_oam(mem))
+            return mem->oam[addr - 0xFE00];
+            
+        return 0xFF;
     }
     else if (addr <= 0xFEFF)
     {
