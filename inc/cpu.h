@@ -37,6 +37,10 @@ static inline void set_hl(Cpu* cpu, uint16_t value) { cpu->h = value >> 8 & 0xFF
 Cpu* cpu_init();
 void cpu_reset(Cpu* cpu);
 
+void cpu_push(Cpu* cpu, Memory* mem, uint16_t value);
+uint16_t cpu_pop(Cpu* cpu, Memory* mem);
+void cpu_call(Cpu* cpu, Memory* mem, uint16_t addr);
+void cpu_ret(Cpu* cpu, Memory* mem);
 uint8_t cpu_step(Cpu* cpu, Memory* mem);
 
 #endif

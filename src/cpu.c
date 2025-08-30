@@ -27,7 +27,31 @@ void cpu_reset(Cpu* cpu)
     cpu->pc = 0x0100;
 }
 
+void cpu_push(Cpu* cpu, Memory* mem, uint16_t value)
+{
+    cpu->sp -= 2;
+    memory_write16(mem, cpu->sp, value);
+}
+
+uint16_t cpu_pop(Cpu* cpu, Memory* mem)
+{
+    uint16_t value = memory_read16(mem, cpu->sp);
+    cpu->sp += 2;
+    return value;
+}
+
+void cpu_call(Cpu* cpu, Memory* mem, uint16_t addr)
+{
+    cpu_push(cpu, mem, cpu->pc);
+    cpu->pc = addr;
+}
+
+void cpu_ret(Cpu* cpu, Memory* mem)
+{
+    cpu->pc = cpu_pop(cpu, mem);
+}
+
 uint8_t cpu_step(Cpu* cpu, Memory* mem)
 {
-
+    // to be implemented
 }
