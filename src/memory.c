@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int can_access_vram(Memory* mem)
+static int can_access_vram(Memory* mem)
 {
     uint8_t lcdc = mem->io[0x40];
     uint8_t stat = mem->io[0x41];
@@ -13,7 +13,7 @@ int can_access_vram(Memory* mem)
     return lcd_enabled == 0x80 && (lcd_mode != 0x03);
 }
 
-int can_access_oam(Memory* mem)
+static int can_access_oam(Memory* mem)
 {
     uint8_t stat = mem->io[0x41];
     uint8_t lcd_mode = stat & 0x03;
@@ -119,7 +119,7 @@ uint8_t memory_read(Memory* mem, uint16_t addr)
     {
         if (can_access_oam(mem))
             return mem->oam[addr - 0xFE00];
-            
+
         return 0xFF;
     }
     else if (addr <= 0xFEFF)
