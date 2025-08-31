@@ -2,8 +2,15 @@
 #define CPU_H
 
 #include "memory.h"
-
 #include <stdint.h>
+
+#define FLAG_ZERO 0x80
+#define FLAG_NEGATIVE 0x40
+#define FLAG_HALFCARRY 0x20
+
+#define SET_FLAG(flag) cpu->f |= flag
+#define CLEAR_FLAG(flag) cpu->f &= ~(flag)
+#define IS_FLAG_SET(flag) cpu->f & flag
 
 typedef struct Cpu {
     uint8_t a;
@@ -37,6 +44,7 @@ static inline void set_hl(Cpu* cpu, uint16_t value) { cpu->h = value >> 8 & 0xFF
 Cpu* cpu_init();
 void cpu_reset(Cpu* cpu);
 
+void cpu_advance_pc(Cpu* cpu, uint8_t value);
 void cpu_push(Cpu* cpu, Memory* mem, uint16_t value);
 uint16_t cpu_pop(Cpu* cpu, Memory* mem);
 void cpu_call(Cpu* cpu, Memory* mem, uint16_t addr);
