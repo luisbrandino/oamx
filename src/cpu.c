@@ -27,6 +27,11 @@ void cpu_reset(Cpu* cpu)
     cpu->pc = 0x0100;
 }
 
+void cpu_add_ticks(Cpu* cpu, uint8_t ticks)
+{
+    cpu->current_ticks += ticks;
+}
+
 void cpu_advance_pc(Cpu* cpu, uint8_t value)
 {
     cpu->pc += value;

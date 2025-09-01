@@ -7,10 +7,11 @@
 #define FLAG_ZERO 0x80
 #define FLAG_NEGATIVE 0x40
 #define FLAG_HALFCARRY 0x20
+#define FLAG_CARRY 0x10
 
 #define SET_FLAG(flag) cpu->f |= flag
 #define CLEAR_FLAG(flag) cpu->f &= ~(flag)
-#define IS_FLAG_SET(flag) cpu->f & flag
+#define IS_FLAG_SET(flag) (cpu->f & (flag)) != 0
 
 typedef struct Cpu {
     uint8_t a;
@@ -27,6 +28,8 @@ typedef struct Cpu {
 
     uint16_t sp;
     uint16_t pc;
+
+    uint8_t current_ticks;
 } Cpu;
 
 static inline uint16_t get_af(Cpu* cpu) { return ((uint16_t)cpu->a << 8 | (cpu->f & 0xF0)); } // only the upper 4 bits of F are valid in AF
@@ -44,6 +47,7 @@ static inline void set_hl(Cpu* cpu, uint16_t value) { cpu->h = value >> 8 & 0xFF
 Cpu* cpu_init();
 void cpu_reset(Cpu* cpu);
 
+void cpu_add_ticks(Cpu* cpu, uint8_t ticks);
 void cpu_advance_pc(Cpu* cpu, uint8_t value);
 void cpu_push(Cpu* cpu, Memory* mem, uint16_t value);
 uint16_t cpu_pop(Cpu* cpu, Memory* mem);
