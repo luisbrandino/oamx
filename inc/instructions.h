@@ -4,20 +4,29 @@
 #include <stdint.h>
 #include "cpu.h"
 
+typedef enum OperandSize {
+    OPERAND_NONE,
+    OPERAND_BYTE,
+    OPERAND_WORD
+} OperandSize;
+
 typedef enum PcMode {
     PC_ADVANCE,
     PC_MANUAL
 } PcMode;
 
+typedef struct Instruction Instruction;
 typedef struct Instruction {
     char* name;
-    uint8_t operand_length;
-    uint8_t ticks;
+    uint8_t base_ticks;
+    OperandSize operand_size;
     PcMode pc_mode;
+    uint8_t operand8;
+    uint16_t operand16;
 
-    void (*handle)(Cpu* cpu, Memory* mem);
+    void (*handle)(Instruction* instruction, Cpu* cpu, Memory* mem);
 } Instruction;
 
-uint8_t execute_instruction(Cpu* cpu, Memory* mem, uint8_t byte);
+void execute_instruction(Cpu* cpu, Memory* mem, uint8_t byte);
 
 #endif
