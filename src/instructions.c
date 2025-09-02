@@ -40,6 +40,27 @@ uint8_t decrement(Cpu* cpu, uint8_t value)
     return value;
 }
 
+uint16_t add16(Cpu* cpu, uint16_t src, uint16_t value)
+{
+    uint32_t result = src + value;
+
+    if (result & 0xFFFF0000)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    if ((src & 0x0FFF) + (value & 0x0FFF) > 0x0FFF)
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    src = (uint16_t)(result & 0xFFFF);
+
+    CLEAR_FLAG(FLAG_NEGATIVE);
+
+    return src;
+}
+
 // --- INSTRUCTIONS --- //
 
 void nop(Instruction* instr, Cpu* cpu, Memory* mem) { }
@@ -76,14 +97,14 @@ void ld_b_n(Instruction* instr, Cpu* cpu, Memory* mem)
 
 void rlca(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    uint8_t last_bit = cpu->a >> 7;
-    if (last_bit)
+    uint8_t carry_bit = cpu->a >> 7;
+    if (carry_bit)
         SET_FLAG(FLAG_CARRY);
     else
         CLEAR_FLAG(FLAG_CARRY);
 
     cpu->a <<= 1;
-    cpu->a += last_bit;
+    cpu->a += carry_bit;
 
     CLEAR_FLAG(FLAG_NEGATIVE | FLAG_ZERO | FLAG_HALFCARRY);
 }
@@ -91,6 +112,53 @@ void rlca(Instruction* instr, Cpu* cpu, Memory* mem)
 void ld_at_nn_sp(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     memory_write16(mem, instr->operand16, cpu->sp);
+}
+
+void add_hl_bc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    uint16_t bc = get_bc(cpu);
+
+    set_hl(cpu, add16(cpu, hl, bc));
+}
+
+void ld_a_at_bc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = memory_read(mem, get_bc(cpu));
+}
+
+void dec_bc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    set_bc(cpu, get_bc(cpu) - 1);
+}
+
+void inc_c(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->c = increment(cpu, cpu->c);
+}
+
+void dec_c(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->c = decrement(cpu, cpu->c);
+}
+
+void ld_c_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->c = instr->operand8;
+}
+
+void rrca(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint8_t carry_bit = cpu->a & 0x01;
+    if (carry_bit)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    cpu->a >>= 1;
+    cpu->a |= (carry_bit << 7);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_ZERO | FLAG_HALFCARRY);
 }
 
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
@@ -109,9 +177,16 @@ const Instruction instructions[0x100] = {
     { "LD B, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_b_n },
     { "RLCA",           4,  OPERAND_NONE, PC_ADVANCE, .handle = rlca },
     { "LD [nn], SP",    20, OPERAND_WORD, PC_ADVANCE, .handle = ld_at_nn_sp },
+    { "ADD HL, BC",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_bc },
+    { "LD A, [BC]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_at_bc },
+    { "DEC BC",         8,  OPERAND_NONE, PC_ADVANCE, .handle = dec_bc },
+    { "INC C",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_c },
+    { "DEC C",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_c },
+    { "LD C, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_c_n },
+    { "RRCA",           4,  OPERAND_NONE, PC_ADVANCE, .handle = rrca },
 };
 
-void execute_instruction(Cpu* cpu, Memory* mem, uint8_t byte)
+void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
 {
     Instruction instruction = instructions[byte];
 
