@@ -13,6 +13,12 @@
 #define CLEAR_FLAG(flag) cpu->f &= ~(flag)
 #define IS_FLAG_SET(flag) (cpu->f & (flag)) != 0
 
+typedef enum {
+    CPU_RUNNING,
+    CPU_HALTED,
+    CPU_STOPPED
+} CpuState;
+
 typedef struct Cpu {
     uint8_t a;
     uint8_t f;
@@ -29,6 +35,7 @@ typedef struct Cpu {
     uint16_t sp;
     uint16_t pc;
 
+    CpuState state;
     uint8_t current_ticks;
 } Cpu;
 

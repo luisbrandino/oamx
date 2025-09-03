@@ -25,6 +25,8 @@ void cpu_reset(Cpu* cpu)
 
     cpu->sp = 0xFFFE; // some homebrews may use 0xDFFF (wram) as the top of the stack
     cpu->pc = 0x0100;
+
+    cpu->state = CPU_RUNNING;
 }
 
 void cpu_add_ticks(Cpu* cpu, uint8_t ticks)
