@@ -216,7 +216,7 @@ void rla(Instruction* instr, Cpu* cpu, Memory* mem)
     CLEAR_FLAG(FLAG_NEGATIVE | FLAG_ZERO | FLAG_HALFCARRY);
 }
 
-void jr_n(Instruction* instr, Cpu* cpu, Memory* mem)
+void jr_e(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu->pc += (int8_t)instr->operand + OPERAND_BYTE;
 }
@@ -269,6 +269,99 @@ void rra(Instruction* instr, Cpu* cpu, Memory* mem)
     CLEAR_FLAG(FLAG_NEGATIVE | FLAG_ZERO | FLAG_HALFCARRY);
 }
 
+void jr_nz_e(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_BYTE);
+    if (!IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu->pc += (int8_t)instr->operand;
+        cpu_add_ticks(cpu, 4);
+    }
+}
+
+void ld_hl_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    set_hl(cpu, instr->operand16);
+}
+
+void ldi_at_hl_a(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    memory_write(mem, get_hl(cpu), cpu->a);
+    set_hl(cpu, get_hl(cpu) + 1);
+}
+
+void inc_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    set_hl(cpu, get_hl(cpu) + 1);
+}
+
+void inc_h(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->h = increment(cpu, cpu->h);
+}
+
+void dec_h(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->h = decrement(cpu, cpu->h);
+}
+
+void ld_h_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->h = instr->operand;
+}
+
+void daa(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    int8_t adjustment = 0;
+
+    if (IS_FLAG_SET(FLAG_NEGATIVE))
+    {
+        if (IS_FLAG_SET(FLAG_HALFCARRY)) adjustment -= 0x06;
+        if (IS_FLAG_SET(FLAG_CARRY)) adjustment -= 0x60;
+    }
+    else
+    {
+        if (IS_FLAG_SET(FLAG_HALFCARRY) || ((cpu->a & 0x0F) > 0x09)) adjustment += 0x06;
+        if (IS_FLAG_SET(FLAG_CARRY) || (cpu->a > 0x99)) adjustment += 0x60;
+    }
+
+    uint16_t result = (uint16_t)cpu->a + adjustment;
+
+    if ((result & 0xFF) == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    if (result >= 0x100)
+        SET_FLAG(FLAG_CARRY);
+
+    cpu->a = (uint8_t)result;
+
+    CLEAR_FLAG(FLAG_HALFCARRY);
+}
+
+void jr_z_e(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_BYTE);
+    if (IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu->pc += (int8_t)instr->operand;
+        cpu_add_ticks(cpu, 4);
+    }
+}
+
+void add_hl_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    set_hl(cpu, add16(cpu, hl, hl));
+}
+
+void ldi_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = memory_read(mem, get_hl(cpu));
+    set_hl(cpu, get_hl(cpu) + 1);
+}
+
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu_push(cpu, mem, cpu->pc + 2);
@@ -284,7 +377,7 @@ const Instruction instructions[0x100] = {
     { "DEC B",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_b },
     { "LD B, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_b_n },
     { "RLCA",           4,  OPERAND_NONE, PC_ADVANCE, .handle = rlca },
-    { "LD [nn], SP",    20, OPERAND_WORD, PC_ADVANCE, .handle = ld_at_nn_sp },
+    { "LD [nn], SP",   20,  OPERAND_WORD, PC_ADVANCE, .handle = ld_at_nn_sp },
     { "ADD HL, BC",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_bc },
     { "LD A, [BC]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_at_bc },
     { "DEC BC",         8,  OPERAND_NONE, PC_ADVANCE, .handle = dec_bc },
@@ -293,21 +386,32 @@ const Instruction instructions[0x100] = {
     { "LD C, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_c_n },
     { "RRCA",           4,  OPERAND_NONE, PC_ADVANCE, .handle = rrca },
     { "STOP n",         4,  OPERAND_NONE, PC_ADVANCE, .handle = stop },
-    { "LD DE, nn",      12, OPERAND_WORD, PC_ADVANCE, .handle = ld_de_nn },
+    { "LD DE, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_de_nn },
     { "LD [DE], A",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_de_a },
     { "INC DE",         8,  OPERAND_NONE, PC_ADVANCE, .handle = inc_de },
     { "INC D",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_d },
     { "DEC D",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_d },
     { "LD D, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_d_n },
     { "RLA",            4,  OPERAND_NONE, PC_ADVANCE, .handle = rla },
-    { "JR n",           12, OPERAND_BYTE, PC_MANUAL,  .handle = jr_n },
-    { "ADD HL, DE",      8, OPERAND_NONE, PC_ADVANCE, .handle = add_hl_de },
-    { "LD A, [DE]",      8, OPERAND_NONE, PC_ADVANCE, .handle = ld_a_at_de },
-    { "DEC DE",          8, OPERAND_NONE, PC_ADVANCE, .handle = dec_de },
-    { "INC E",           4, OPERAND_NONE, PC_ADVANCE, .handle = inc_e },
-    { "DEC E",           4, OPERAND_NONE, PC_ADVANCE, .handle = dec_e },
-    { "LD E, n",         8, OPERAND_BYTE, PC_ADVANCE, .handle = ld_e_n },
-    { "RRA",             4, OPERAND_NONE, PC_ADVANCE, .handle = rra },
+    { "JR e",          12,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_e },
+    { "ADD HL, DE",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_de },
+    { "LD A, [DE]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_at_de },
+    { "DEC DE",         8,  OPERAND_NONE, PC_ADVANCE, .handle = dec_de },
+    { "INC E",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_e },
+    { "DEC E",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_e },
+    { "LD E, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_e_n },
+    { "RRA",            4,  OPERAND_NONE, PC_ADVANCE, .handle = rra },
+    { "JR NZ, e",       8,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_nz_e },
+    { "LD HL, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_hl_nn },
+    { "LD [HL+], A",    8,  OPERAND_NONE, PC_ADVANCE, .handle = ldi_at_hl_a },
+    { "INC HL",         8,  OPERAND_NONE, PC_ADVANCE, .handle = inc_hl },
+    { "INC H",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_h },
+    { "DEC H",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_h },
+    { "LD H, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_h_n },
+    { "DAA",            4,  OPERAND_NONE, PC_ADVANCE, .handle = daa },
+    { "JR Z, e",        8,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_z_e },
+    { "ADD HL, HL",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_hl },
+    { "LD A, [HL+]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = ldi_a_at_hl },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
