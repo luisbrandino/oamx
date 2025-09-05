@@ -362,6 +362,137 @@ void ldi_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem)
     set_hl(cpu, get_hl(cpu) + 1);
 }
 
+void dec_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    set_hl(cpu, get_hl(cpu) - 1);
+}
+
+void inc_l(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->l = increment(cpu, cpu->l);
+}
+
+void dec_l(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->l = decrement(cpu, cpu->l);
+}
+
+void ld_l_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->l = instr->operand;
+}
+
+void cpl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = ~cpu->a;
+    SET_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+}
+
+void jr_nc_e(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_BYTE);
+    if (!IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu->pc += (int8_t)instr->operand;
+        cpu_add_ticks(cpu, 4);
+    }
+}
+
+void ld_sp_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->sp = instr->operand16;
+}
+
+void ldd_at_hl_a(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    memory_write(mem, hl, cpu->a);
+    set_hl(cpu, hl - 1);
+}
+
+void inc_sp(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->sp++;
+}
+
+void inc_at_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    uint8_t value = memory_read(mem, hl);
+    memory_write(mem, hl, increment(cpu, value));
+}
+
+void dec_at_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    uint8_t value = memory_read(mem, hl);
+    memory_write(mem, hl, decrement(cpu, value));
+}
+
+void ld_at_hl_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    memory_write(mem, get_hl(cpu), instr->operand);
+}
+
+void scf(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    SET_FLAG(FLAG_CARRY);
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+}
+
+void jr_c_e(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_BYTE);
+    if (IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu->pc += (int8_t)instr->operand;
+        cpu_add_ticks(cpu, 4);
+    }
+}
+
+void add_hl_sp(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    set_hl(cpu, add16(cpu, hl, cpu->sp));
+}
+
+void ldd_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    uint16_t hl = get_hl(cpu);
+    cpu->a = memory_read(mem, hl);
+    set_hl(cpu, hl - 1);
+}
+
+void dec_sp(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->sp--;
+}
+
+void inc_a(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = increment(cpu, cpu->a);
+}
+
+void dec_a(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = decrement(cpu, cpu->a);
+}
+
+void ld_a_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a = instr->operand;
+}
+
+void ccf(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (IS_FLAG_SET(FLAG_CARRY))
+        CLEAR_FLAG(FLAG_CARRY);
+    else
+        SET_FLAG(FLAG_CARRY);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+}
+
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu_push(cpu, mem, cpu->pc + 2);
@@ -370,7 +501,7 @@ void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 
 const Instruction instructions[0x100] = {
     { "NOP",            4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
-    { "LD BC, nn",      12, OPERAND_WORD, PC_ADVANCE, .handle = ld_bc_nn },
+    { "LD BC, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_bc_nn },
     { "LD [BC], A",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_bc_a },
     { "INC BC",         8,  OPERAND_NONE, PC_ADVANCE, .handle = inc_bc },
     { "INC B",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_b },
@@ -412,6 +543,27 @@ const Instruction instructions[0x100] = {
     { "JR Z, e",        8,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_z_e },
     { "ADD HL, HL",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_hl },
     { "LD A, [HL+]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = ldi_a_at_hl },
+    { "DEC HL",         8,  OPERAND_NONE, PC_ADVANCE, .handle = dec_hl },
+    { "INC L",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_l },
+    { "DEC L",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_l },
+    { "LD L, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_l_n },
+    { "CPL",            4,  OPERAND_NONE, PC_ADVANCE, .handle = cpl },
+    { "JR NC, e",       8,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_nc_e },
+    { "LD SP, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_sp_nn },
+    { "LD [HL-], A",    8,  OPERAND_NONE, PC_ADVANCE, .handle = ldd_at_hl_a },
+    { "INC SP",         8,  OPERAND_NONE, PC_ADVANCE, .handle = inc_sp },
+    { "INC [HL]",      12,  OPERAND_NONE, PC_ADVANCE, .handle = inc_at_hl },
+    { "DEC [HL]",      12,  OPERAND_NONE, PC_ADVANCE, .handle = dec_at_hl },
+    { "LD [HL], n",    12,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_at_hl_n },
+    { "SCF",            4,  OPERAND_NONE, PC_ADVANCE, .handle = scf },
+    { "JR C, e",        8,  OPERAND_BYTE, PC_MANUAL,  .handle = jr_c_e },
+    { "ADD HL, SP",     8,  OPERAND_NONE, PC_ADVANCE, .handle = add_hl_sp },
+    { "LD A, [HL-]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = ldd_a_at_hl },
+    { "DEC SP",         8,  OPERAND_NONE, PC_ADVANCE, .handle = dec_sp },
+    { "INC A",          4,  OPERAND_NONE, PC_ADVANCE, .handle = inc_a },
+    { "DEC A",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_a },
+    { "LD A, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_a_n },
+    { "CCF",            4,  OPERAND_NONE, PC_ADVANCE, .handle = ccf },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
