@@ -40,6 +40,32 @@ uint8_t decrement(Cpu* cpu, uint8_t value)
     return value;
 }
 
+uint8_t add(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint16_t result = src + value;
+
+    if ((src & 0x0F) + (value & 0x0F) > 0x0F)
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if (result > 0xFF)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    src = (uint8_t)(result & 0xFF);
+
+    if (src == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE);
+
+    return src;
+}
+
 uint16_t add16(Cpu* cpu, uint16_t src, uint16_t value)
 {
     uint32_t result = src + value;
@@ -55,6 +81,33 @@ uint16_t add16(Cpu* cpu, uint16_t src, uint16_t value)
         CLEAR_FLAG(FLAG_HALFCARRY);
 
     src = (uint16_t)(result & 0xFFFF);
+
+    CLEAR_FLAG(FLAG_NEGATIVE);
+
+    return src;
+}
+
+uint8_t adc(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint8_t carry_in = IS_FLAG_SET(FLAG_CARRY);
+    uint16_t result = src + value + carry_in;
+
+    if (((src & 0x0F) + (value & 0x0F) + carry_in) > 0x0F)
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if (result > 0xFF)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    src = (uint8_t)(result & 0xFF);
+
+    if (src == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
 
     CLEAR_FLAG(FLAG_NEGATIVE);
 
@@ -493,6 +546,157 @@ void ccf(Instruction* instr, Cpu* cpu, Memory* mem)
     CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
 }
 
+void ld_b_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->c; }
+
+void ld_b_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->d; }
+
+void ld_b_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->e; }
+
+void ld_b_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->h; }
+
+void ld_b_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->l; }
+
+void ld_b_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = memory_read(mem, get_hl(cpu)); }
+
+void ld_b_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->b = cpu->a; }
+
+void ld_c_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->b; }
+
+void ld_c_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->d; }
+
+void ld_c_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->e; }
+
+void ld_c_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->h; }
+
+void ld_c_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->l; }
+
+void ld_c_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = memory_read(mem, get_hl(cpu)); }
+
+void ld_c_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->c = cpu->a; }
+
+void ld_d_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->b; }
+
+void ld_d_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->c; }
+
+void ld_d_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->e; }
+
+void ld_d_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->h; }
+
+void ld_d_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->l; }
+
+void ld_d_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = memory_read(mem, get_hl(cpu)); }
+
+void ld_d_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->d = cpu->a; }
+
+void ld_e_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->b; }
+
+void ld_e_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->c; }
+
+void ld_e_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->d; }
+
+void ld_e_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->h; }
+
+void ld_e_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->l; }
+
+void ld_e_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = memory_read(mem, get_hl(cpu)); }
+
+void ld_e_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->e = cpu->a; }
+
+void ld_h_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->b; }
+
+void ld_h_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->c; }
+
+void ld_h_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->d; }
+
+void ld_h_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->e; }
+
+void ld_h_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->l; }
+
+void ld_h_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = memory_read(mem, get_hl(cpu)); }
+
+void ld_h_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->h = cpu->a; }
+
+void ld_l_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->b; }
+
+void ld_l_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->c; }
+
+void ld_l_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->d; }
+
+void ld_l_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->e; }
+
+void ld_l_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->h; }
+
+void ld_l_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = memory_read(mem, get_hl(cpu)); }
+
+void ld_l_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->l = cpu->a; }
+
+void ld_at_hl_b(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->b); }
+
+void ld_at_hl_c(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->c); }
+
+void ld_at_hl_d(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->d); }
+
+void ld_at_hl_e(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->e); }
+
+void ld_at_hl_h(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->h); }
+
+void ld_at_hl_l(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->l); }
+
+void halt(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    /**
+     * TODO: implement this after interrupts
+     */
+}
+
+void ld_at_hl_a(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->a); }
+
+void ld_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->b; }
+
+void ld_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->c; }
+
+void ld_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->d; }
+
+void ld_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->e; }
+
+void ld_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->h; }
+
+void ld_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = cpu->l; }
+
+void ld_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, get_hl(cpu)); }
+
+void add_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->b); }
+
+void add_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->c); }
+
+void add_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->d); }
+
+void add_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->e); }
+
+void add_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->h); }
+
+void add_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->l); }
+
+void add_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void add_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, cpu->a); }
+
+void adc_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->b); }
+
+void adc_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->c); }
+
+void adc_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->d); }
+
+void adc_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->e); }
+
+void adc_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->h); }
+
+void adc_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->l); }
+
+void adc_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void adc_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->a); }
+
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu_push(cpu, mem, cpu->pc + 2);
@@ -564,6 +768,86 @@ const Instruction instructions[0x100] = {
     { "DEC A",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_a },
     { "LD A, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_a_n },
     { "CCF",            4,  OPERAND_NONE, PC_ADVANCE, .handle = ccf },
+    { "LD B, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD B, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_c },
+    { "LD B, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_d },
+    { "LD B, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_e },
+    { "LD B, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_h },
+    { "LD B, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_l },
+    { "LD B, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_at_hl },
+    { "LD B, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_b_a },
+    { "LD C, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_b },
+    { "LD C, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD C, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_d },
+    { "LD C, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_e },
+    { "LD C, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_h },
+    { "LD C, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_l },
+    { "LD C, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_at_hl },
+    { "LD C, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_c_a },
+    { "LD D, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_b },
+    { "LD D, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_c },
+    { "LD D, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD D, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_e },
+    { "LD D, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_h },
+    { "LD D, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_l },
+    { "LD D, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_at_hl },
+    { "LD D, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_d_a },
+    { "LD E, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_b },
+    { "LD E, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_c },
+    { "LD E, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_d },
+    { "LD E, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD E, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_h },
+    { "LD E, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_l },
+    { "LD E, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_at_hl },
+    { "LD E, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_e_a },
+    { "LD H, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_b },
+    { "LD H, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_c },
+    { "LD H, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_d },
+    { "LD H, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_e },
+    { "LD H, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD H, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_l },
+    { "LD H, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_at_hl },
+    { "LD H, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_h_a },
+    { "LD L, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_b },
+    { "LD L, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_c },
+    { "LD L, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_d },
+    { "LD L, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_e },
+    { "LD L, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_h },
+    { "LD L, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "LD L, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_at_hl },
+    { "LD L, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_l_a },
+    { "LD [HL], B",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_b },
+    { "LD [HL], C",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_c },
+    { "LD [HL], D",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_d },
+    { "LD [HL], E",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_e },
+    { "LD [HL], H",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_h },
+    { "LD [HL], L",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_l },
+    { "HALT",           4,  OPERAND_NONE, PC_ADVANCE, .handle = halt },
+    { "LD [HL], A",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_hl_a },
+    { "LD A, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_b },
+    { "LD A, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_c },
+    { "LD A, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_d },
+    { "LD A, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_e },
+    { "LD A, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_h },
+    { "LD A, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_l },
+    { "LD A, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_a_at_hl },
+    { "LD A, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
+    { "ADD A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_b },
+    { "ADD A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_c },
+    { "ADD A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_d },
+    { "ADD A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_e },
+    { "ADD A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_h },
+    { "ADD A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_l },
+    { "ADD A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_at_hl },
+    { "ADD A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = add_a_a },
+    { "ADC A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_b },
+    { "ADC A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_c },
+    { "ADC A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_d },
+    { "ADC A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_e },
+    { "ADC A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_h },
+    { "ADC A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_l },
+    { "ADC A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_at_hl },
+    { "ADC A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_a },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
