@@ -114,6 +114,69 @@ uint8_t adc(Cpu* cpu, uint8_t src, uint8_t value)
     return src;
 }
 
+uint8_t and(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint8_t result = src & value;
+
+    if (result == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    SET_FLAG(FLAG_HALFCARRY);
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_CARRY);
+
+    return result;
+}
+
+uint8_t xor(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint8_t result = src ^ value;
+
+    if (result == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY | FLAG_CARRY);
+
+    return result;
+}
+
+uint8_t or(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint8_t result = src | value;
+
+    if (result == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY | FLAG_CARRY);
+
+    return result;
+}
+
+void cp(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    if (src == value)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    if (src < value)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    if ((src & 0x0F) < (value & 0x0F))
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    SET_FLAG(FLAG_NEGATIVE);
+}
+
 // --- INSTRUCTIONS --- //
 
 void nop(Instruction* instr, Cpu* cpu, Memory* mem) { }
@@ -697,6 +760,70 @@ void adc_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, 
 
 void adc_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->a); }
 
+void and_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->b); }
+
+void and_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->c); }
+
+void and_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->d); }
+
+void and_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->e); }
+
+void and_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->h); }
+
+void and_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->l); }
+
+void and_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void and_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->a); }
+
+void xor_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->b); }
+
+void xor_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->c); }
+
+void xor_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->d); }
+
+void xor_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->e); }
+
+void xor_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->h); }
+
+void xor_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->l); }
+
+void xor_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void xor_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, cpu->a); }
+
+void or_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->b); }
+
+void or_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->c); }
+
+void or_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->d); }
+
+void or_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->e); }
+
+void or_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->h); }
+
+void or_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->l); }
+
+void or_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void or_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, cpu->a); }
+
+void cp_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->b); }
+
+void cp_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->c); }
+
+void cp_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->d); }
+
+void cp_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->e); }
+
+void cp_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->h); }
+
+void cp_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->l); }
+
+void cp_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void cp_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->a); }
+
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu_push(cpu, mem, cpu->pc + 2);
@@ -848,6 +975,38 @@ const Instruction instructions[0x100] = {
     { "ADC A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_l },
     { "ADC A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_at_hl },
     { "ADC A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_a },
+    { "AND A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_b },
+    { "AND A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_c },
+    { "AND A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_d },
+    { "AND A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_e },
+    { "AND A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_h },
+    { "AND A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_l },
+    { "AND A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_at_hl },
+    { "AND A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_a },
+    { "XOR A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_b },
+    { "XOR A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_c },
+    { "XOR A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_d },
+    { "XOR A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_e },
+    { "XOR A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_h },
+    { "XOR A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_l },
+    { "XOR A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_at_hl },
+    { "XOR A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = xor_a_a },
+    { "OR A, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_b },
+    { "OR A, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_c },
+    { "OR A, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_d },
+    { "OR A, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_e },
+    { "OR A, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_h },
+    { "OR A, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_l },
+    { "OR A, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_at_hl },
+    { "OR A, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = or_a_a },
+    { "CP A, B",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_b },
+    { "CP A, C",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_c },
+    { "CP A, D",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_d },
+    { "CP A, E",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_e },
+    { "CP A, H",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_h },
+    { "CP A, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_l },
+    { "CP A, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_at_hl },
+    { "CP A, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_a },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
