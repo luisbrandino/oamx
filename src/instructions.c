@@ -1053,6 +1053,89 @@ void ret_c(Instruction* instr, Cpu* cpu, Memory* mem)
     }
 }
 
+void reti(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    // after implementing interrupts, set IME to 1
+    cpu_ret(cpu, mem);
+}
+
+void jp_c_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu->pc = instr->operand16;
+        cpu_add_ticks(cpu, 4);
+    }
+    else
+    {
+        cpu_advance_pc(cpu, OPERAND_WORD);
+    }
+}
+
+void call_c_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_WORD);
+    if (IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu_call(cpu, mem, instr->operand16);
+        cpu_add_ticks(cpu, 12);
+    }
+}
+
+void sbc_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, instr->operand); }
+
+void rst_18(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0018); }
+
+void ldh_at_n_a(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, 0xFF00 + instr->operand, cpu->a); }
+
+void pop_hl(Instruction* instr, Cpu* cpu, Memory* mem) { set_hl(cpu, cpu_pop(cpu, mem)); }
+
+void ldh_at_c_a(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, 0xFF00 + cpu->c, cpu->a); }
+
+void push_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_hl(cpu)); }
+
+void and_a_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->a &= instr->operand;
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_CARRY);
+    SET_FLAG(FLAG_HALFCARRY);
+    if (cpu->a)
+        CLEAR_FLAG(FLAG_ZERO);
+    else
+        SET_FLAG(FLAG_ZERO);
+}
+
+void rst_20(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0020); }
+
+void add_sp_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    int8_t operand = (int8_t)instr->operand;
+    if ((cpu->sp & 0x000F) + (operand & 0x0F) > 0x000F)
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+    
+    if ((cpu->sp & 0x00FF) + operand > 0x00FF)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    CLEAR_FLAG(FLAG_ZERO | FLAG_NEGATIVE);
+
+    cpu->sp += operand;
+}
+
+void jp_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->pc = get_hl(cpu); }
+
+void ld_at_nn_a(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, instr->operand16, cpu->a); }
+
+void xor_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = xor(cpu, cpu->a, instr->operand); }
+
+void rst_28(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0028); }
+
+void ldh_a_at_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, 0xFF00 + instr->operand); }
+
 const Instruction instructions[0x100] = {
     { "NOP",            4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
     { "LD BC, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_bc_nn },
@@ -1270,6 +1353,30 @@ const Instruction instructions[0x100] = {
     { "SUB A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = sub_a_n },
     { "RST $10",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_10 },
     { "RET C",          8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_c },
+    { "RETI",          16,  OPERAND_NONE, PC_ADVANCE, .handle = reti },
+    { "JP C, nn",      12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_c_nn },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "CALL C, nn",    12,  OPERAND_WORD, PC_MANUAL,  .handle = call_c_nn },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "SBC A, N",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = sbc_a_n },
+    { "RST $18",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_18 },
+    { "LDH [n], A",    12,  OPERAND_BYTE, PC_ADVANCE, .handle = ldh_at_n_a },
+    { "POP HL",        12,  OPERAND_NONE, PC_ADVANCE, .handle = pop_hl },
+    { "LDH [C], A",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ldh_at_c_a },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "PUSH HL",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_hl },
+    { "AND A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = and_a_n },
+    { "RST $20",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_20 },
+    { "ADD SP, n",     16,  OPERAND_BYTE, PC_ADVANCE, .handle = add_sp_n },
+    { "JP HL",          4,  OPERAND_NONE, PC_MANUAL,  .handle = jp_hl },
+    { "LD [nn], A",    16,  OPERAND_WORD, PC_ADVANCE, .handle = ld_at_nn_a },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "XOR A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = xor_a_n },
+    { "RST $28",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_28 },
+    { "LDH A, [n]",    12,  OPERAND_BYTE, PC_ADVANCE, .handle = ldh_a_at_n },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
