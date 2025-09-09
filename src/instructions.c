@@ -824,6 +824,89 @@ void cp_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, mem
 
 void cp_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, cpu->a); }
 
+void ret_nz(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (!IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu_ret(cpu, mem);
+        cpu_add_ticks(cpu, 12);
+    }
+}
+
+void pop_bc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    set_bc(cpu, cpu_pop(cpu, mem));
+}
+
+void jp_nz_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (!IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu->pc = instr->operand16;
+        cpu_add_ticks(cpu, 4);
+    } 
+    else
+    {
+        cpu_advance_pc(cpu, OPERAND_WORD);
+    }
+}
+
+void jp_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu->pc = instr->operand16;
+}
+
+void call_nz_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (!IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu_call(cpu, mem, instr->operand16);
+        cpu_add_ticks(cpu, 12);
+    }
+    else
+    {
+        cpu_advance_pc(cpu, OPERAND_WORD);
+    }
+}
+
+void push_bc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_push(cpu, mem, get_bc(cpu));
+}
+
+void add_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, instr->operand); }
+
+void rst_00(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0000); }
+
+void ret_z(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu_ret(cpu, mem);
+        cpu_add_ticks(cpu, 12);
+    }
+}
+
+void ret(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_ret(cpu, mem); }
+
+void jp_z_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu->pc = instr->operand16;
+        cpu_add_ticks(cpu, 4);
+    }
+    else
+    {
+        cpu_advance_pc(cpu, OPERAND_WORD);
+    }
+}
+
+void prefix(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    
+}
+
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     cpu_push(cpu, mem, cpu->pc + 2);
@@ -1007,6 +1090,17 @@ const Instruction instructions[0x100] = {
     { "CP A, L",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_l },
     { "CP A, [HL]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_at_hl },
     { "CP A, A",        4,  OPERAND_NONE, PC_ADVANCE, .handle = cp_a_a },
+    { "RET NZ",         8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_nz },
+    { "POP BC",        12,  OPERAND_NONE, PC_ADVANCE, .handle = pop_bc },
+    { "JP NZ, nn",     12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_nz_nn },
+    { "JP nn",         16,  OPERAND_WORD, PC_MANUAL,  .handle = jp_nn },
+    { "CALL NZ, nn",   12,  OPERAND_WORD, PC_MANUAL,  .handle = call_nz_nn },
+    { "PUSH BC",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_bc },
+    { "ADD A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = add_a_n },
+    { "RST $00",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_00 },
+    { "RET Z",          8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_z },
+    { "RET",           16,  OPERAND_NONE, PC_MANUAL,  .handle = ret },
+    { "JP Z, nn",      12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_z_nn },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
