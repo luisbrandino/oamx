@@ -114,6 +114,55 @@ uint8_t adc(Cpu* cpu, uint8_t src, uint8_t value)
     return src;
 }
 
+uint8_t sub(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    uint8_t result = src - value;
+
+    if ((src & 0x0F) < (value & 0x0F))
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if (src < value)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+    
+    if (result == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+    
+    SET_FLAG(FLAG_NEGATIVE);
+
+    return result;
+}
+
+uint8_t sbc(Cpu* cpu, uint8_t src, uint8_t value)
+{
+    value += IS_FLAG_SET(FLAG_CARRY);
+    uint8_t result = src - value;
+
+    if ((src & 0x0F) < (value & 0x0F))
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if (src < value)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    if (result == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    SET_FLAG(FLAG_NEGATIVE);
+
+    return result;
+}
+
 uint8_t and(Cpu* cpu, uint8_t src, uint8_t value)
 {
     uint8_t result = src & value;
@@ -760,6 +809,38 @@ void adc_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, 
 
 void adc_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, cpu->a); }
 
+void sub_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->b); }
+
+void sub_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->c); }
+
+void sub_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->d); }
+
+void sub_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->e); }
+
+void sub_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->h); }
+
+void sub_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->l); }
+
+void sub_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void sub_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, cpu->a); }
+
+void sbc_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->b); }
+
+void sbc_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->c); }
+
+void sbc_a_d(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->d); }
+
+void sbc_a_e(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->e); }
+
+void sbc_a_h(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->h); }
+
+void sbc_a_l(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->l); }
+
+void sbc_a_at_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, memory_read(mem, get_hl(cpu))); }
+
+void sbc_a_a(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sbc(cpu, cpu->a, cpu->a); }
+
 void and_a_b(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->b); }
 
 void and_a_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = and(cpu, cpu->a, cpu->c); }
@@ -833,10 +914,7 @@ void ret_nz(Instruction* instr, Cpu* cpu, Memory* mem)
     }
 }
 
-void pop_bc(Instruction* instr, Cpu* cpu, Memory* mem)
-{
-    set_bc(cpu, cpu_pop(cpu, mem));
-}
+void pop_bc(Instruction* instr, Cpu* cpu, Memory* mem) { set_bc(cpu, cpu_pop(cpu, mem)); }
 
 void jp_nz_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
@@ -858,14 +936,11 @@ void jp_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 
 void call_nz_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
+    cpu_advance_pc(cpu, OPERAND_WORD);
     if (!IS_FLAG_SET(FLAG_ZERO))
     {
         cpu_call(cpu, mem, instr->operand16);
         cpu_add_ticks(cpu, 12);
-    }
-    else
-    {
-        cpu_advance_pc(cpu, OPERAND_WORD);
     }
 }
 
@@ -902,15 +977,80 @@ void jp_z_nn(Instruction* instr, Cpu* cpu, Memory* mem)
     }
 }
 
-void prefix(Instruction* instr, Cpu* cpu, Memory* mem)
+void cb_n(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    
+    // to be implemented
+    // instr->operand = next opcode
+    // no need to advance PC
+}
+
+void call_z_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_WORD);
+    if (IS_FLAG_SET(FLAG_ZERO))
+    {
+        cpu_call(cpu, mem, instr->operand16);
+        cpu_add_ticks(cpu, 12);
+    }
 }
 
 void call_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    cpu_push(cpu, mem, cpu->pc + 2);
-    cpu->pc = instr->operand16;
+    cpu_advance_pc(cpu, OPERAND_WORD);
+    cpu_call(cpu, mem, instr->operand16);
+}
+
+void adc_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = adc(cpu, cpu->a, instr->operand); }
+
+void rst_08(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0008); }
+
+void ret_nc(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (!IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu_ret(cpu, mem);
+        cpu_add_ticks(cpu, 12);
+    }
+}
+
+void pop_de(Instruction* instr, Cpu* cpu, Memory* mem) { set_de(cpu, cpu_pop(cpu, mem)); }
+
+void jp_nc_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (!IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu->pc = instr->operand16;
+        cpu_add_ticks(cpu, 4);
+    }
+    else
+    {
+        cpu_advance_pc(cpu, OPERAND_WORD);
+    }
+}
+
+void call_nc_nn(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    cpu_advance_pc(cpu, OPERAND_WORD);
+    if (!IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu_call(cpu, mem, instr->operand16);
+        cpu_add_ticks(cpu, 12);
+    }
+}
+
+void push_de(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_de(cpu)); }
+
+void sub_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = sub(cpu, cpu->a, instr->operand); }
+
+void rst_10(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0010); }
+
+void ret_c(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    if (IS_FLAG_SET(FLAG_CARRY))
+    {
+        cpu_ret(cpu, mem);
+        cpu_add_ticks(cpu, 12);
+    }
 }
 
 const Instruction instructions[0x100] = {
@@ -1058,6 +1198,22 @@ const Instruction instructions[0x100] = {
     { "ADC A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_l },
     { "ADC A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_at_hl },
     { "ADC A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = adc_a_a },
+    { "SUB A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_b },
+    { "SUB A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_c },
+    { "SUB A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_d },
+    { "SUB A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_e },
+    { "SUB A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_h },
+    { "SUB A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_l },
+    { "SUB A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_at_hl },
+    { "SUB A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sub_a_a },
+    { "SBC A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_b },
+    { "SBC A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_c },
+    { "SBC A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_d },
+    { "SBC A, E",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_e },
+    { "SBC A, H",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_h },
+    { "SBC A, L",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_l },
+    { "SBC A, [HL]",    8,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_at_hl },
+    { "SBC A, A",       4,  OPERAND_NONE, PC_ADVANCE, .handle = sbc_a_a },
     { "AND A, B",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_b },
     { "AND A, C",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_c },
     { "AND A, D",       4,  OPERAND_NONE, PC_ADVANCE, .handle = and_a_d },
@@ -1101,6 +1257,19 @@ const Instruction instructions[0x100] = {
     { "RET Z",          8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_z },
     { "RET",           16,  OPERAND_NONE, PC_MANUAL,  .handle = ret },
     { "JP Z, nn",      12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_z_nn },
+    { "CB n",           0,  OPERAND_BYTE, PC_ADVANCE, .handle = cb_n },
+    { "CALL Z, nn",    12,  OPERAND_WORD, PC_MANUAL,  .handle = call_z_nn },
+    { "CALL nn",       24,  OPERAND_WORD, PC_MANUAL,  .handle = call_nn },
+    { "ADC A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = adc_a_n },
+    { "RST $08",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_08 },
+    { "RET NC",         8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_nc },
+    { "JP NC, nn",     12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_nc_nn },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "CALL NC, nn",   12,  OPERAND_WORD, PC_MANUAL,  .handle = call_nc_nn },
+    { "PUSH DE",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_de },
+    { "SUB A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = sub_a_n },
+    { "RST $10",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_10 },
+    { "RET C",          8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_c },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
