@@ -1346,6 +1346,7 @@ const Instruction instructions[0x100] = {
     { "ADC A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = adc_a_n },
     { "RST $08",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_08 },
     { "RET NC",         8,  OPERAND_NONE, PC_MANUAL,  .handle = ret_nc },
+    { "POP DE",        12,  OPERAND_NONE, PC_ADVANCE, .handle = pop_de },
     { "JP NC, nn",     12,  OPERAND_WORD, PC_MANUAL,  .handle = jp_nc_nn },
     { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
     { "CALL NC, nn",   12,  OPERAND_WORD, PC_MANUAL,  .handle = call_nc_nn },
