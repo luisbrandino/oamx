@@ -1136,6 +1136,46 @@ void rst_28(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x00
 
 void ldh_a_at_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, 0xFF00 + instr->operand); }
 
+void pop_af(Instruction* instr, Cpu* cpu, Memory* mem) { set_af(cpu, cpu_pop(cpu, mem)); }
+
+void ldh_a_at_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, 0xFF00 + cpu->c); }
+
+void di() { /* implement after interrupts */ }
+
+void push_af(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_af(cpu)); }
+
+void or_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = or(cpu, cpu->a, instr->operand); }
+
+void rst_30(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0030); }
+
+void ld_hl_sp_plus_n(Instruction* instr, Cpu* cpu, Memory* mem)
+{
+    int8_t operand = (int8_t)instr->operand;
+    if ((cpu->sp & 0x000F) + (operand & 0x0F) > 0x0F)
+        SET_FLAG(FLAG_HALFCARRY);
+    else
+        CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if ((cpu->sp & 0x00FF) + (operand & 0xFF) > 0xFF)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    CLEAR_FLAG(FLAG_ZERO | FLAG_NEGATIVE);
+
+    set_hl(cpu, cpu->sp + operand);
+}
+
+void ld_sp_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->sp = get_hl(cpu); }
+
+void ld_a_at_nn(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, instr->operand16); }
+
+void ei() { /* implement after interrupts */ }
+
+void cp_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, instr->operand); }
+
+void rst_38(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x0038); }
+
 const Instruction instructions[0x100] = {
     { "NOP",            4,  OPERAND_NONE, PC_ADVANCE, .handle = nop },
     { "LD BC, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_bc_nn },
@@ -1378,6 +1418,21 @@ const Instruction instructions[0x100] = {
     { "XOR A, n",       8,  OPERAND_BYTE, PC_ADVANCE, .handle = xor_a_n },
     { "RST $28",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_28 },
     { "LDH A, [n]",    12,  OPERAND_BYTE, PC_ADVANCE, .handle = ldh_a_at_n },
+    { "POP AF",        12,  OPERAND_NONE, PC_ADVANCE, .handle = pop_af },
+    { "LDH A, [C]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ldh_a_at_c },
+    { "DI",             4,  OPERAND_NONE, PC_ADVANCE, .handle = di },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "PUSH AF",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_hl },
+    { "OR A, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = or_a_n },
+    { "RST $30",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_30 },
+    { "LD HL, SP+n",   12,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_hl_sp_plus_n },
+    { "LD SP, HL",      8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_sp_hl },
+    { "LD A, [nn]",    16,  OPERAND_WORD, PC_ADVANCE, .handle = ld_a_at_nn },
+    { "EI",             4,  OPERAND_NONE, PC_ADVANCE, .handle = ei },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
+    { "CP A, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = cp_a_n },
+    { "RST $38",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_38 },
 };
 
 void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
