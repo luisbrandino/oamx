@@ -1,4 +1,5 @@
 #include "../inc/instructions.h"
+#include "../inc/cb_instructions.h"
 
 // --- HELPERS --- //
 
@@ -982,6 +983,8 @@ void cb_n(Instruction* instr, Cpu* cpu, Memory* mem)
     // to be implemented
     // instr->operand = next opcode
     // no need to advance PC
+
+    execute_cb_instruction(cpu, mem, instr->operand);
 }
 
 void call_z_nn(Instruction* instr, Cpu* cpu, Memory* mem)
@@ -1140,7 +1143,7 @@ void pop_af(Instruction* instr, Cpu* cpu, Memory* mem) { set_af(cpu, cpu_pop(cpu
 
 void ldh_a_at_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, 0xFF00 + cpu->c); }
 
-void di() { /* implement after interrupts */ }
+void di(Instruction* instr, Cpu* cpu, Memory* mem) { /* implement after interrupts */ }
 
 void push_af(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_af(cpu)); }
 
@@ -1170,7 +1173,7 @@ void ld_sp_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->sp = get_hl(cpu)
 
 void ld_a_at_nn(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, instr->operand16); }
 
-void ei() { /* implement after interrupts */ }
+void ei(Instruction* instr, Cpu* cpu, Memory* mem) { /* implement after interrupts */ }
 
 void cp_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, instr->operand); }
 
@@ -1435,8 +1438,11 @@ const Instruction instructions[0x100] = {
     { "RST $38",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_38 },
 };
 
-void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte)
+void execute(Cpu* cpu, Memory* mem, uint8_t byte)
 {
+    if (byte < 0 || byte > 0x100)
+        return;
+
     Instruction instruction = instructions[byte];
 
     instruction.operand = 0;

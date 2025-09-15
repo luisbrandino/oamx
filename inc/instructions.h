@@ -27,6 +27,6 @@ typedef struct Instruction {
     void (*handle)(Instruction* instruction, Cpu* cpu, Memory* mem);
 } Instruction;
 
-void instruction_execute(Cpu* cpu, Memory* mem, uint8_t byte);
+void execute(Cpu* cpu, Memory* mem, uint8_t byte);
 
 #endif

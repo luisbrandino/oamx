@@ -72,11 +72,37 @@ void test_cpu_call_and_ret()
     free(mem);
 }
 
+void test_cpu_flags()
+{
+    Cpu* cpu = cpu_init();
+    cpu_reset(cpu);
+
+    SET_FLAG(FLAG_CARRY);
+    assert(IS_FLAG_SET(FLAG_CARRY) == 1);
+
+    SET_FLAG(FLAG_HALFCARRY);
+    assert(IS_FLAG_SET(FLAG_HALFCARRY) == 1);
+
+    SET_FLAG(FLAG_NEGATIVE);
+    assert(IS_FLAG_SET(FLAG_NEGATIVE) == 1);
+
+    SET_FLAG(FLAG_ZERO);
+    assert(IS_FLAG_SET(FLAG_ZERO) == 1);
+
+    CLEAR_FLAG(FLAG_CARRY | FLAG_HALFCARRY | FLAG_NEGATIVE | FLAG_ZERO);
+
+    assert(IS_FLAG_SET(FLAG_CARRY) == 0);
+    assert(IS_FLAG_SET(FLAG_HALFCARRY) == 0);
+    assert(IS_FLAG_SET(FLAG_NEGATIVE) == 0);
+    assert(IS_FLAG_SET(FLAG_ZERO) == 0);
+}
+
 int main()
 {
     test_cpu_reset();
     test_cpu_push_and_pop();
     test_cpu_call_and_ret();
+    test_cpu_flags();
 
     return EXIT_SUCCESS;
 }
