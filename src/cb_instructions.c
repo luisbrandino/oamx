@@ -80,6 +80,73 @@ uint8_t rr(Cpu* cpu, uint8_t value)
     return value;
 }
 
+uint8_t sla(Cpu* cpu, uint8_t value)
+{
+    if (value >> 7)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    value <<= 1;
+    if (value == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+
+    return value;
+}
+
+uint8_t sra(Cpu* cpu, uint8_t value)
+{
+    if (value & 0x01)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    value = (value & 0x80) | (value >> 1);
+    if (value == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+
+    return value;
+}
+
+uint8_t swap(Cpu* cpu, uint8_t value)
+{
+    value = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4);
+    if (value == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY | FLAG_CARRY);
+
+    return value;
+}
+
+uint8_t srl(Cpu* cpu, uint8_t value)
+{
+    if (value & 0x01)
+        SET_FLAG(FLAG_CARRY);
+    else
+        CLEAR_FLAG(FLAG_CARRY);
+
+    value >>= 1;
+    if (value == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+    
+    CLEAR_FLAG(FLAG_NEGATIVE | FLAG_HALFCARRY);
+
+    return value;
+}
+
 // --- INSTRUCTIONS --- //
 
 void rlc_b(Cpu* cpu, Memory* mem) { cpu->b = rlc(cpu, cpu->b); }
@@ -118,6 +185,42 @@ void rr_l(Cpu* cpu, Memory* mem) { cpu->l = rr(cpu, cpu->l); }
 void rr_at_hl(Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), rr(cpu, memory_read(mem, get_hl(cpu)))); }
 void rr_a(Cpu* cpu, Memory* mem) { cpu->a = rr(cpu, cpu->a); }
 
+void sla_b(Cpu* cpu, Memory* mem) { cpu->b = sla(cpu, cpu->b); }
+void sla_c(Cpu* cpu, Memory* mem) { cpu->c = sla(cpu, cpu->c); }
+void sla_d(Cpu* cpu, Memory* mem) { cpu->d = sla(cpu, cpu->d); }
+void sla_e(Cpu* cpu, Memory* mem) { cpu->e = sla(cpu, cpu->e); }
+void sla_h(Cpu* cpu, Memory* mem) { cpu->h = sla(cpu, cpu->h); }
+void sla_l(Cpu* cpu, Memory* mem) { cpu->l = sla(cpu, cpu->l); }
+void sla_at_hl(Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), sla(cpu, memory_read(mem, get_hl(cpu)))); }
+void sla_a(Cpu* cpu, Memory* mem) { cpu->a = sla(cpu, cpu->a); }
+
+void sra_b(Cpu* cpu, Memory* mem) { cpu->b = sra(cpu, cpu->b); }
+void sra_c(Cpu* cpu, Memory* mem) { cpu->c = sra(cpu, cpu->c); }
+void sra_d(Cpu* cpu, Memory* mem) { cpu->d = sra(cpu, cpu->d); }
+void sra_e(Cpu* cpu, Memory* mem) { cpu->e = sra(cpu, cpu->e); }
+void sra_h(Cpu* cpu, Memory* mem) { cpu->h = sra(cpu, cpu->h); }
+void sra_l(Cpu* cpu, Memory* mem) { cpu->l = sra(cpu, cpu->l); }
+void sra_at_hl(Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), sra(cpu, memory_read(mem, get_hl(cpu)))); }
+void sra_a(Cpu* cpu, Memory* mem) { cpu->a = sra(cpu, cpu->a); }
+
+void swap_b(Cpu* cpu, Memory* mem) { cpu->b = swap(cpu, cpu->b); }
+void swap_c(Cpu* cpu, Memory* mem) { cpu->c = swap(cpu, cpu->c); }
+void swap_d(Cpu* cpu, Memory* mem) { cpu->d = swap(cpu, cpu->d); }
+void swap_e(Cpu* cpu, Memory* mem) { cpu->e = swap(cpu, cpu->e); }
+void swap_h(Cpu* cpu, Memory* mem) { cpu->h = swap(cpu, cpu->h); }
+void swap_l(Cpu* cpu, Memory* mem) { cpu->l = swap(cpu, cpu->l); }
+void swap_at_hl(Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), swap(cpu, memory_read(mem, get_hl(cpu)))); }
+void swap_a(Cpu* cpu, Memory* mem) { cpu->a = swap(cpu, cpu->a); }
+
+void srl_b(Cpu* cpu, Memory* mem) { cpu->b = srl(cpu, cpu->b); }
+void srl_c(Cpu* cpu, Memory* mem) { cpu->c = srl(cpu, cpu->c); }
+void srl_d(Cpu* cpu, Memory* mem) { cpu->d = srl(cpu, cpu->d); }
+void srl_e(Cpu* cpu, Memory* mem) { cpu->e = srl(cpu, cpu->e); }
+void srl_h(Cpu* cpu, Memory* mem) { cpu->h = srl(cpu, cpu->h); }
+void srl_l(Cpu* cpu, Memory* mem) { cpu->l = srl(cpu, cpu->l); }
+void srl_at_hl(Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), srl(cpu, memory_read(mem, get_hl(cpu)))); }
+void srl_a(Cpu* cpu, Memory* mem) { cpu->a = srl(cpu, cpu->a); }
+
 const CBInstruction cb_instructions[0x100] = {
     { "RLC B",      8, rlc_b },
     { "RLC C",      8, rlc_c },
@@ -151,6 +254,38 @@ const CBInstruction cb_instructions[0x100] = {
     { "RR L",       8, rr_l },
     { "RR [HL]",   16, rr_at_hl },
     { "RR A",       8, rr_a },
+    { "SLA B",      8, sla_b },
+    { "SLA C",      8, sla_c },
+    { "SLA D",      8, sla_d },
+    { "SLA E",      8, sla_e },
+    { "SLA H",      8, sla_h },
+    { "SLA L",      8, sla_l },
+    { "SLA [HL]",  16, sla_at_hl },
+    { "SLA A",      8, sla_a },
+    { "SRA B",      8, sra_b },
+    { "SRA C",      8, sra_c },
+    { "SRA D",      8, sra_d },
+    { "SRA E",      8, sra_e },
+    { "SRA H",      8, sra_h },
+    { "SRA L",      8, sra_l },
+    { "SRA [HL]",  16, sra_at_hl },
+    { "SRA A",      8, sra_a },
+    { "SWAP B",     8, swap_b },
+    { "SWAP C",     8, swap_c },
+    { "SWAP D",     8, swap_d },
+    { "SWAP E",     8, swap_e },
+    { "SWAP H",     8, swap_h },
+    { "SWAP L",     8, swap_l },
+    { "SWAP [HL]", 16, swap_at_hl },
+    { "SWAP A",     8, swap_a },
+    { "SRL B",      8, srl_b },
+    { "SRL C",      8, srl_c },
+    { "SRL D",      8, srl_d },
+    { "SRL E",      8, srl_e },
+    { "SRL H",      8, srl_h },
+    { "SRL L",      8, srl_l },
+    { "SRL [HL]",  16, srl_at_hl },
+    { "SRL A",      8, srl_a },
 };
 
 void execute_cb_instruction(Cpu* cpu, Memory* mem, uint8_t byte)
