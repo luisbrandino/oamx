@@ -37,6 +37,7 @@ typedef struct Cpu {
 
     CpuState state;
     uint8_t current_ticks;
+    uint8_t ime;
 } Cpu;
 
 static inline uint16_t get_af(Cpu* cpu) { return ((uint16_t)cpu->a << 8 | (cpu->f & 0xF0)); } // only the upper 4 bits of F are valid in AF
