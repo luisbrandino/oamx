@@ -44,9 +44,9 @@ void handle_interrupts(Cpu* cpu, Memory* mem)
     }
 }
 
-void request_interrupt(Memory* mem, uint8_t interrupt_bit)
+void request_interrupt(Memory* mem, uint8_t interrupt)
 {
     uint8_t IF = memory_read(mem, IF_ADDR);
-    IF |= (1 << interrupt_bit);
+    IF |= interrupt;
     memory_write(mem, IF_ADDR, IF & 0x1F);
 }
