@@ -57,12 +57,14 @@ void test_interrupts_handle_interrupts()
     for (int i = 0; i < 5; i++) {
         cpu->pc = 0x1234;
         cpu->ime = 1;
+        cpu->state = CPU_HALTED;
         memory_write(mem, IF_ADDR, interrupts[i].bit);
         memory_write(mem, IE_ADDR, interrupts[i].bit);
 
         handle_interrupts(cpu, mem);
 
         assert(cpu->ime == 0);
+        assert(cpu->state == CPU_RUNNING);
         assert(cpu->pc == interrupts[i].addr);
 
         uint8_t IF = memory_read(mem, IF_ADDR);
