@@ -71,10 +71,6 @@ static void ppu_draw_background(Ppu* ppu, Memory* mem)
         uint16_t element_x;
         uint16_t element_y;
         uint16_t tilemap_base;
-        uint8_t tile_col;
-        uint8_t tile_row;
-        uint8_t line_x;
-        uint8_t line_y;
 
         if (window_enabled && ppu->ly >= wy && x >= (wx - 7))
         {
@@ -90,11 +86,11 @@ static void ppu_draw_background(Ppu* ppu, Memory* mem)
             element_x = (uint8_t)(x + scx);
             element_y = (uint8_t)(ppu->ly + scy);
         }
-
-        tile_col = element_x / 8;
-        tile_row = element_y / 8;
-        line_x = element_x % 8;
-        line_y = element_y % 8;
+        
+        uint8_t tile_col = element_x / 8;
+        uint8_t tile_row = element_y / 8;
+        uint8_t line_x = element_x % 8;
+        uint8_t line_y = element_y % 8;
 
         uint16_t tilemap_index = tile_row * 32 + tile_col;
         uint8_t tile_index = memory_read(mem, tilemap_base + tilemap_index);
