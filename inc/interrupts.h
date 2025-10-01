@@ -16,9 +16,10 @@
 #define IE_ADDR 0xFFFF
 #define IF_ADDR 0xFF0F
 
-#include "./cpu.h"
+#include "cpu.h"
+#include "ppu.h"
 
-void handle_interrupts(Cpu* cpu, Memory* mem);
+void handle_interrupts(Cpu* cpu, Ppu* ppu, Memory* mem);
 void request_interrupt(Memory* mem, uint8_t interrupt_bit);
 
 #endif
