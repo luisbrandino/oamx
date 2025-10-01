@@ -3,11 +3,11 @@
 
 #include "../inc/display.h"
 
-static const uint32_t gameboy_palette32[4] = {
-    0xFFFFFFFF, // black
-    0xFFC0C0C0, // light grey
-    0xFF606060, // black grey
-    0xFF000000  // grey
+static const uint32_t gb_palette[4] = {
+    0xFFFFFFFF,
+    0xC0C0C0FF,
+    0x606060FF,
+    0x000000FF
 };
 
 static SDL_Window* window;
@@ -28,7 +28,7 @@ void display_init(DisplayContext* ctx)
 
     texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_ARGB8888,
+        SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_STREAMING,
         SCREEN_WIDTH, SCREEN_HEIGHT
     );
@@ -64,10 +64,10 @@ void display_quit(DisplayContext* ctx)
 
 void display_render(Ppu* ppu)
 {
-    uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
+    static uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
     for (uint8_t y = 0; y < SCREEN_HEIGHT; y++)
         for (uint8_t x = 0; x < SCREEN_WIDTH; x++)
-            pixels[y * SCREEN_WIDTH + x] = gameboy_palette32[ppu->framebuffer[y][x]];
+            pixels[y * SCREEN_WIDTH + x] = gb_palette[ppu->framebuffer[y][x]];
 
     SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(uint32_t));
     SDL_RenderClear(renderer);
