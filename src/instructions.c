@@ -499,34 +499,6 @@ void daa(Instruction* instr, Cpu* cpu, Memory* mem)
         SET_FLAG(FLAG_ZERO);
     else
         CLEAR_FLAG(FLAG_ZERO);
-
-    /*
-    int8_t adjustment = 0;
-
-    if (IS_FLAG_SET(FLAG_NEGATIVE))
-    {
-        if (IS_FLAG_SET(FLAG_HALFCARRY)) adjustment -= 0x06;
-        if (IS_FLAG_SET(FLAG_CARRY)) adjustment -= 0x60;
-    }
-    else
-    {
-        if (IS_FLAG_SET(FLAG_HALFCARRY) || ((cpu->a & 0x0F) > 0x09)) adjustment += 0x06;
-        if (IS_FLAG_SET(FLAG_CARRY) || (cpu->a > 0x99)) adjustment += 0x60;
-    }
-
-    uint16_t result = (uint16_t)cpu->a + adjustment;
-
-    if ((result & 0xFF) == 0)
-        SET_FLAG(FLAG_ZERO);
-    else
-        CLEAR_FLAG(FLAG_ZERO);
-
-    if (result >= 0x100)
-        SET_FLAG(FLAG_CARRY);
-
-    cpu->a = (uint8_t)result;
-
-    CLEAR_FLAG(FLAG_HALFCARRY);*/
 }
 
 void jr_z_e(Instruction* instr, Cpu* cpu, Memory* mem)

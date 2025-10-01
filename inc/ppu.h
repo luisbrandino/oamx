@@ -52,6 +52,5 @@ typedef struct {
 
 Ppu* ppu_init();
 void ppu_step(Ppu* ppu, Memory* mem, uint8_t ticks);
-void ppu_get_framebuffer(Ppu* ppu, uint8_t out[SCREEN_HEIGHT][SCREEN_WIDTH]);
 
 #endif

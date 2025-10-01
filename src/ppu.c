@@ -97,7 +97,7 @@ static void ppu_draw_window(Ppu* ppu, Memory* mem)
 
         screen_rendered = 1;
         uint16_t element_x = x - window_x;
-        uint16_t element_y = ppu->window_line_counter; //ppu->ly - window_y;
+        uint16_t element_y = ppu->window_line_counter;
         uint16_t tilemap_base = (mem->lcdc & (1 << 6)) ? 0x9C00 : 0x9800;
 
         ppu_render_element_pixel(ppu, mem, x, element_x, element_y, tilemap_base);
@@ -320,9 +320,4 @@ Ppu* ppu_init()
     ppu->ticks = 0;
     ppu->sprite_height = 8;
     ppu->visible_sprite_count = 0;
-}
-
-void ppu_get_framebuffer(Ppu* ppu, uint8_t out[SCREEN_HEIGHT][SCREEN_WIDTH])
-{
-    memcpy(out, ppu->framebuffer, SCREEN_HEIGHT * SCREEN_WIDTH);
 }
