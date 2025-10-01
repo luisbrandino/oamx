@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../inc/interrupts.h"
+#include "../inc/display.h"
 #include "../inc/ppu.h"
 
 static Sprite read_sprite(Memory* mem, uint8_t index)
@@ -11,12 +12,12 @@ static Sprite read_sprite(Memory* mem, uint8_t index)
     uint8_t flags = mem->oam[index * 4 + 3];
     PriorityType priority = (flags & (1 << 7)) ? BEHIND_BG : OVERLAP_BG;
 
-    return (Sprite) { sprite_y, sprite_x, tile, flags, priority };
+    return (Sprite) { sprite_y, sprite_x, tile, flags, index, priority };
 }
 
-static uint16_t get_tile_base_address(uint8_t lcdc_bit4, int16_t tile_index)
+static uint16_t get_tile_base_address(uint8_t is_unsigned, int16_t tile_index)
 {
-    if (lcdc_bit4)
+    if (is_unsigned)
         return 0x8000 + (uint16_t)tile_index * 16;
     
     return 0x9000 + tile_index * 16;
@@ -30,13 +31,6 @@ static uint8_t get_tile_pixel_from_vram(Memory* mem, uint16_t tile_base_address,
     uint8_t b2 = memory_read(mem, tile_base_address + line * 2 + 1);
 
     uint8_t mask = 1 << (7 - x);
-    // let x be 2:
-    // b1 = low
-    // b2 = high
-    // b1 = 0b00000000
-    // b2 = 0b00100000
-    // result for x = 2 should be:
-    // pixel = 0b00000010
     uint8_t pixel = (((b2 & mask) >> (7 - x)) << 1) | ((b1 & mask) >> (7 - x));
     return pixel & 0x03;
 }
@@ -47,109 +41,98 @@ static uint8_t get_sprite_pixel(Ppu* ppu, Memory* mem, uint16_t tile_index, uint
     x = (flags & (1 << 5)) ? 7 - x : x;
 
     uint16_t tile_to_use = tile_index;
-    if (ppu->sprite_height == 16 && y >= 8)
+    if (ppu->sprite_height == 16)
     {
-        tile_to_use++;
-        y -= 8;
+        tile_to_use &= 0xFE; 
+        if (y >= 8)
+        {
+            tile_to_use++;
+            y -= 8;
+        }
     }
 
-    uint16_t tile_base_address = get_tile_base_address(1, tile_to_use); // always unsigned
+    uint16_t tile_base_address = get_tile_base_address(UNSIGNED_TILE_INDEX, tile_to_use);
     return get_tile_pixel_from_vram(mem, tile_base_address, y, x);
+}
+
+static void ppu_render_element_pixel(Ppu* ppu, Memory* mem, uint8_t screen_x, uint16_t element_x, uint16_t element_y, uint16_t tilemap_base)
+{
+    uint8_t tile_col = element_x / 8;
+    uint8_t tile_row = element_y / 8;
+    uint8_t line_x = element_x % 8;
+    uint8_t line_y = element_y % 8;
+
+    uint16_t tilemap_index = tile_row * 32 + tile_col;
+    uint8_t tile_index = memory_read(mem, tilemap_base + tilemap_index);
+
+    uint8_t is_unsigned = mem->lcdc & (1 << 4) ? UNSIGNED_TILE_INDEX : SIGNED_TILE_INDEX;
+    uint16_t tile_base_address = get_tile_base_address(is_unsigned, is_unsigned ? tile_index : (int8_t)tile_index);
+    uint8_t color = get_tile_pixel_from_vram(mem, tile_base_address, line_y, line_x);
+
+    uint8_t bgp = mem->bgp;
+    uint8_t shade = (bgp >> (color * 2)) & 0x03;
+
+    ppu->framebuffer[mem->ly][screen_x] = shade;
+}
+
+static void ppu_draw_window(Ppu* ppu, Memory* mem)
+{
+    if (!(mem->lcdc & LCDC_WINDOW_ENABLED))
+        return;
+
+    uint8_t window_x = mem->wx - 7;
+    uint8_t window_y = mem->wy;
+
+    if (mem->ly < window_y)
+        return;
+
+    if (mem->ly == window_y)
+        ppu->window_line_counter = 0;
+
+    uint8_t screen_rendered = 0;
+    for (uint8_t x = 0; x < SCREEN_WIDTH; x++)
+    {
+        if (x < window_x)
+            continue;
+
+        screen_rendered = 1;
+        uint16_t element_x = x - window_x;
+        uint16_t element_y = ppu->window_line_counter; //ppu->ly - window_y;
+        uint16_t tilemap_base = (mem->lcdc & (1 << 6)) ? 0x9C00 : 0x9800;
+
+        ppu_render_element_pixel(ppu, mem, x, element_x, element_y, tilemap_base);
+    }
+
+    if (screen_rendered)
+        ppu->window_line_counter++;
 }
 
 static void ppu_draw_background(Ppu* ppu, Memory* mem)
 {
-    uint8_t scx = memory_read(mem, 0xFF43);
-    uint8_t scy = memory_read(mem, 0xFF42);
-    uint8_t wy = memory_read(mem, 0xFF4A);
-    uint8_t wx = memory_read(mem, 0xFF4B);
-    uint8_t lcdc = memory_read(mem, 0xFF40);
-    uint8_t window_enabled = lcdc & (1 << 5);
+    uint8_t scx = mem->scx;
+    uint8_t scy = mem->scy;
 
     for (uint8_t x = 0; x < SCREEN_WIDTH; x++)
     {
-        uint16_t element_x;
-        uint16_t element_y;
-        uint16_t tilemap_base;
-
-        if (window_enabled && ppu->ly >= wy && x >= (wx - 7))
-        {
-            // window
-            tilemap_base = (lcdc & (1 << 6)) ? 0x9C00 : 0x9800;
-            element_x = (uint8_t)(x - (wx - 7));
-            element_y = (uint8_t)(ppu->ly - wy);
-        }
-        else
-        {
-            // background
-            tilemap_base = (lcdc & (1 << 3)) ? 0x9C00 : 0x9800;
-            element_x = (uint8_t)(x + scx);
-            element_y = (uint8_t)(ppu->ly + scy);
-        }
+        uint16_t element_x = (uint8_t)(x + scx);
+        uint16_t element_y = (uint8_t)(mem->ly + scy);
+        uint16_t tilemap_base = (mem->lcdc & (1 << 3)) ? 0x9C00 : 0x9800;
         
-        uint8_t tile_col = element_x / 8;
-        uint8_t tile_row = element_y / 8;
-        uint8_t line_x = element_x % 8;
-        uint8_t line_y = element_y % 8;
-
-        uint16_t tilemap_index = tile_row * 32 + tile_col;
-        uint8_t tile_index = memory_read(mem, tilemap_base + tilemap_index);
-
-        uint8_t lcdc_bit4 = lcdc & (1 << 4);
-        uint16_t tile_base_address = get_tile_base_address(lcdc_bit4, lcdc_bit4 ? tile_index : (int8_t)tile_index);
-        uint8_t color = get_tile_pixel_from_vram(mem, tile_base_address, line_y, line_x);
-
-        uint8_t bgp = memory_read(mem, 0xFF47);
-        uint8_t shade = (bgp >> (color * 2)) & 0x03;
-
-        ppu->framebuffer[ppu->ly][x] = shade;
-    }
-}
-
-static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
-{   
-    ppu_draw_background(ppu, mem);
-
-    for (uint8_t i = 0; i < ppu->visible_sprite_count; i++)
-    {
-        Sprite sprite = ppu->visible_sprites[i];
-
-        for (int px = 0; px < 8; px++)
-        {
-            uint8_t screen_x = sprite.x - 8 + px;
-            if (screen_x >= SCREEN_WIDTH)
-                continue;
-
-            uint8_t line_in_sprite = ppu->ly - (sprite.y - 16);
-            uint8_t color = get_sprite_pixel(ppu, mem, sprite.tile, line_in_sprite, px, sprite.flags);
-
-            if (color == 0)
-                continue;
-
-            uint8_t palette = (sprite.flags & (1 << 4)) ? memory_read(mem, 0xFF49) : memory_read(mem, 0xFF48);
-            uint8_t shade = (palette >> (color * 2)) & 0x03;
-
-            uint8_t bg_pixel = ppu->framebuffer[ppu->ly][screen_x];
-
-            // sprite's pixel should not overlap background
-            if (sprite.priority == BEHIND_BG && bg_pixel != 0)
-                continue;
-
-            ppu->framebuffer[ppu->ly][screen_x] = shade;
-        }
+        ppu_render_element_pixel(ppu, mem, x, element_x, element_y, tilemap_base);
     }
 }
 
 static void ppu_oam_search(Ppu* ppu, Memory* mem)
 {
-    uint8_t lcdc = memory_read(mem, 0xFF40);
+    uint8_t lcdc = mem->lcdc;
     ppu->sprite_height = (lcdc & (1 << 2)) ? 16 : 8;
     ppu->visible_sprite_count = 0;
 
     for (uint8_t i = 0; i < 40; i++)
     {
         Sprite sprite = read_sprite(mem, i);
-        if ((ppu->ly + 16) >= sprite.y && (ppu->ly + 16) < (sprite.y + ppu->sprite_height))
+        
+        if ((mem->ly + 16) >= sprite.y && (mem->ly + 16) < (sprite.y + ppu->sprite_height))
         {
             ppu->visible_sprites[ppu->visible_sprite_count++] = sprite;
             if (ppu->visible_sprite_count >= 10)
@@ -158,27 +141,120 @@ static void ppu_oam_search(Ppu* ppu, Memory* mem)
     }
 }
 
+static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
+{   
+    ppu_draw_background(ppu, mem);
+    ppu_draw_window(ppu, mem);
+
+    if (!(mem->lcdc & LCDC_SPRITE_ENABLED))
+        return;
+
+    ppu_oam_search(ppu, mem);
+    Sprite* pixel_sprite_map[SCREEN_WIDTH] = { NULL };
+    for (uint8_t i = 0; i < ppu->visible_sprite_count; i++)
+    {
+        Sprite* sprite = &ppu->visible_sprites[i];
+        int sprite_x_in_screen = sprite->x - 8;
+        uint8_t line_in_sprite = mem->ly - (sprite->y - 16);
+
+        for (int px = 0; px < 8; px++)
+        {
+            uint8_t screen_x = sprite_x_in_screen + px;
+            if (screen_x < 0 || screen_x >= SCREEN_WIDTH)
+                continue;
+
+            uint8_t color = get_sprite_pixel(ppu, mem, sprite->tile, line_in_sprite, px, sprite->flags);
+            if (color == 0)
+                continue;
+
+            uint8_t bg_pixel = ppu->framebuffer[mem->ly][screen_x];
+            if (sprite->priority == BEHIND_BG && bg_pixel != 0)
+                continue;
+
+            Sprite *other_sprite = pixel_sprite_map[screen_x];
+            if (other_sprite != NULL)
+            {
+                if (other_sprite->x < sprite->x)
+                    continue;
+
+                if (other_sprite->x == sprite->x && other_sprite->oam_index < sprite->oam_index)
+                    continue;
+            }
+
+            uint8_t palette = (sprite->flags & (1 << 4)) ? mem->obp1 : mem->obp0;
+            uint8_t shade = (palette >> (color * 2)) & 0x03;
+
+            pixel_sprite_map[screen_x] = sprite;
+            ppu->framebuffer[mem->ly][screen_x] = shade;
+        }
+    }
+}
+
+static inline void update_stat_to_ppu_mode(Ppu* ppu, Memory* mem)
+{
+    mem->stat = ((mem->stat & 0xFC) | ppu->mode);
+}
+
+static void update_lyc_flag(Ppu* ppu, Memory* mem)
+{
+    if (mem->ly == mem->lyc)
+    {
+        mem->stat |= 0x04;
+        if (mem->stat & (1 << 6))
+            request_interrupt(mem, LCD_STAT_INTERRUPT); 
+    }
+    else
+    {
+        mem->stat &= 0xFB;
+    }
+}
+
 void ppu_step(Ppu* ppu, Memory* mem, uint8_t ticks)
 {
     ppu->ticks += ticks;
+
+    if ((mem->lcdc & 0x80) == 0)
+    {
+        ppu->lcd_on = 0;
+        ppu->mode = HBLANK;
+        return;
+    }
+
+    if (!ppu->lcd_on)
+    {
+        ppu->lcd_on = 1;
+
+        ppu->ticks = 0;
+        ppu->sprite_height = 8;
+        ppu->visible_sprite_count = 0;
+
+        return;
+    }
 
     switch (ppu->mode)
     {
         case OAM:
             if (ppu->ticks >= OAM_TICKS)
             {
-                ppu_oam_search(ppu, mem);
                 ppu->ticks -= OAM_TICKS;
                 ppu->mode = RAM;
+                update_stat_to_ppu_mode(ppu, mem);
             }
             break;
         
         case RAM:
             if (ppu->ticks >= RAM_TICKS)
             {
-                ppu_draw_scanline(ppu, mem);
                 ppu->ticks -= RAM_TICKS;
                 ppu->mode = HBLANK;
+
+                update_stat_to_ppu_mode(ppu, mem);
+
+                if (mem->ly < 144)
+                    ppu_draw_scanline(ppu, mem);
+
+                if (mem->stat & (1 << 3))
+                    request_interrupt(mem, LCD_STAT_INTERRUPT);
             }
             break;
 
@@ -186,19 +262,30 @@ void ppu_step(Ppu* ppu, Memory* mem, uint8_t ticks)
             if (ppu->ticks >= HBLANK_TICKS)
             {
                 ppu->ticks -= HBLANK_TICKS;
-                ppu->ly++;
+                mem->ly++;
 
-                if (ppu->ly == SCREEN_HEIGHT)
+                update_lyc_flag(ppu, mem);
+
+                if (mem->ly == SCREEN_HEIGHT)
                 {
                     request_interrupt(mem, VBLANK_INTERRUPT);
                     ppu->mode = VBLANK;
+                    update_stat_to_ppu_mode(ppu, mem);
+
+                    display_render(ppu);
+                    
+                    if (mem->stat & (1 << 4))
+                        request_interrupt(mem, LCD_STAT_INTERRUPT);
                 }
                 else
                 {
                     ppu->mode = OAM;
+                    update_stat_to_ppu_mode(ppu, mem);
+
+                    if (mem->stat & (1 << 5))
+                        request_interrupt(mem, LCD_STAT_INTERRUPT);
                 }
 
-                memory_write(mem, 0xFF44, ppu->ly);
             }
             break;
 
@@ -206,16 +293,21 @@ void ppu_step(Ppu* ppu, Memory* mem, uint8_t ticks)
             if (ppu->ticks >= VBLANK_TICKS)
             {
                 ppu->ticks -= VBLANK_TICKS;
-                ppu->ly++;
+                mem->ly++;
 
-                if (ppu->ly > 153)
+                update_lyc_flag(ppu, mem);
+
+                if (mem->ly >= 153)
                 {
-                    ppu->ly = 0;
+                    mem->ly = 0;
                     ppu->mode = OAM;
-                }
+                    update_stat_to_ppu_mode(ppu, mem);
 
-                memory_write(mem, 0xFF44, ppu->ly);
+                    if (mem->stat & (1 << 5))
+                        request_interrupt(mem, LCD_STAT_INTERRUPT);
+                }
             }
+            break;
     }
 }
 
@@ -225,7 +317,6 @@ Ppu* ppu_init()
     memset(ppu, 0, sizeof(Ppu));
 
     ppu->mode = OAM;
-    ppu->ly = 0;
     ppu->ticks = 0;
     ppu->sprite_height = 8;
     ppu->visible_sprite_count = 0;
