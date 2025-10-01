@@ -39,7 +39,7 @@ void test_cpu_push_and_pop()
 
     cpu_push(cpu, mem, 0x1CDE);
 
-    assert(cpu->sp == initial_sp -2);
+    assert(cpu->sp == initial_sp - 2);
     assert(memory_read16(mem, initial_sp - 2) == 0x1CDE);
 
     uint16_t value = cpu_pop(cpu, mem);

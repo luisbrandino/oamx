@@ -116,7 +116,7 @@ void test_memory_ie_write_and_read()
 
     memory_write(mem, 0xFFFF, 0x01);
     assert(memory_read(mem, 0xFFFF) == 0x01);
-    assert(mem->ie == 0x01);
+    assert(mem->IE == 0x01);
 
     free(mem);
 }

@@ -26,6 +26,7 @@ void test_interrupts_request_interrupt()
 
 void test_interrupts_handle_interrupts()
 {
+    Ppu* ppu = ppu_init();
     Cpu* cpu = cpu_init();
     Memory* mem = memory_init();
     cpu_reset(cpu);
@@ -37,7 +38,7 @@ void test_interrupts_handle_interrupts()
     cpu->ime = 0;
     memory_write(mem, IF_ADDR, VBLANK_INTERRUPT);
     memory_write(mem, IE_ADDR, 0x00);
-    handle_interrupts(cpu, mem);
+    handle_interrupts(cpu, ppu, mem);
     assert(cpu->state == CPU_RUNNING);
 
     cpu->state = CPU_RUNNING;
@@ -61,7 +62,7 @@ void test_interrupts_handle_interrupts()
         memory_write(mem, IF_ADDR, interrupts[i].bit);
         memory_write(mem, IE_ADDR, interrupts[i].bit);
 
-        handle_interrupts(cpu, mem);
+        handle_interrupts(cpu, ppu, mem);
 
         assert(cpu->ime == 0);
         assert(cpu->state == CPU_RUNNING);
