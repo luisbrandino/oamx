@@ -1,4 +1,5 @@
 #include <time.h>
+#include <assert.h>
 
 #include "../inc/interrupts.h"
 #include "../inc/display.h"
@@ -29,7 +30,8 @@ int main(int argc, char **argv)
     DisplayContext ctx;
     display_init(&ctx);
 
-    load_rom(mem, "C:\\dev\\oamx\\roms\\pokemonred.gb");
+    assert(argc > 1);
+    load_rom(mem, argv[1]);
 
     uint64_t next_frame_time = get_time_us() + FRAME_DURATION;
     while (ctx.is_running)
