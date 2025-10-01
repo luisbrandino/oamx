@@ -1,5 +1,6 @@
 #include "../inc/cpu.h"
 #include "../inc/memory.h"
+#include "../inc/instructions.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,6 +20,7 @@ Cpu* cpu_init()
 void cpu_reset(Cpu* cpu)
 {
     set_af(cpu, 0x01B0);
+
     set_bc(cpu, 0x0013);
     set_de(cpu, 0x00D8);
     set_hl(cpu, 0x014D);
@@ -27,6 +29,7 @@ void cpu_reset(Cpu* cpu)
     cpu->pc = 0x0100;
 
     cpu->state = CPU_RUNNING;
+    cpu->ime = 1;
 }
 
 void cpu_add_ticks(Cpu* cpu, uint8_t ticks)
@@ -63,7 +66,18 @@ void cpu_ret(Cpu* cpu, Memory* mem)
     cpu->pc = cpu_pop(cpu, mem);
 }
 
-uint8_t cpu_step(Cpu* cpu, Memory* mem)
+uint16_t cpu_step(Cpu* cpu, Memory* mem)
 {
-    // to be implemented
+    uint16_t last_pc = cpu->pc;
+
+    if (cpu->state == CPU_HALTED)
+        return NOP_TICKS;
+
+    uint8_t opcode = memory_read(mem, cpu->pc++);
+    execute(cpu, mem, opcode);
+
+    uint16_t ticks = cpu->current_ticks;
+    cpu->current_ticks = 0;
+
+    return ticks;
 }

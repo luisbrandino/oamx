@@ -13,6 +13,8 @@
 #define CLEAR_FLAG(flag) cpu->f &= ~(flag)
 #define IS_FLAG_SET(flag) (cpu->f & (flag)) != 0
 
+#define NOP_TICKS 4
+
 typedef enum {
     CPU_RUNNING,
     CPU_HALTED,
@@ -36,7 +38,7 @@ typedef struct Cpu {
     uint16_t pc;
 
     CpuState state;
-    uint8_t current_ticks;
+    uint16_t current_ticks;
     uint8_t ime;
 } Cpu;
 
@@ -61,6 +63,6 @@ void cpu_push(Cpu* cpu, Memory* mem, uint16_t value);
 uint16_t cpu_pop(Cpu* cpu, Memory* mem);
 void cpu_call(Cpu* cpu, Memory* mem, uint16_t addr);
 void cpu_ret(Cpu* cpu, Memory* mem);
-uint8_t cpu_step(Cpu* cpu, Memory* mem);
+uint16_t cpu_step(Cpu* cpu, Memory* mem);
 
 #endif

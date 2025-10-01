@@ -1,7 +1,6 @@
 #include "../inc/memory.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 void memory_write(Memory* mem, uint16_t addr, uint8_t value)
 {

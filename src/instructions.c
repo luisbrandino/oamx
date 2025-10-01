@@ -69,7 +69,7 @@ uint8_t add(Cpu* cpu, uint8_t src, uint8_t value)
 
 uint16_t add16(Cpu* cpu, uint16_t src, uint16_t value)
 {
-    uint32_t result = src + value;
+    uint32_t result = (uint32_t)src + (uint32_t)value;
 
     if (result & 0xFFFF0000)
         SET_FLAG(FLAG_CARRY);
@@ -81,11 +81,9 @@ uint16_t add16(Cpu* cpu, uint16_t src, uint16_t value)
     else
         CLEAR_FLAG(FLAG_HALFCARRY);
 
-    src = (uint16_t)(result & 0xFFFF);
-
     CLEAR_FLAG(FLAG_NEGATIVE);
 
-    return src;
+    return (uint16_t)result;
 }
 
 uint8_t adc(Cpu* cpu, uint8_t src, uint8_t value)
@@ -141,27 +139,27 @@ uint8_t sub(Cpu* cpu, uint8_t src, uint8_t value)
 
 uint8_t sbc(Cpu* cpu, uint8_t src, uint8_t value)
 {
-    value += IS_FLAG_SET(FLAG_CARRY);
-    uint8_t result = src - value;
+    uint8_t carry = IS_FLAG_SET(FLAG_CARRY);
+    uint16_t result = (uint16_t)src - (uint16_t)value - carry;
 
-    if ((src & 0x0F) < (value & 0x0F))
+    if (((src & 0x0F) - (value & 0x0F) - carry) & 0x10)
         SET_FLAG(FLAG_HALFCARRY);
     else
         CLEAR_FLAG(FLAG_HALFCARRY);
 
-    if (src < value)
+    if (result > 0xFF)
         SET_FLAG(FLAG_CARRY);
     else
         CLEAR_FLAG(FLAG_CARRY);
 
-    if (result == 0)
+    if ((result & 0xFF) == 0)
         SET_FLAG(FLAG_ZERO);
     else
         CLEAR_FLAG(FLAG_ZERO);
 
     SET_FLAG(FLAG_NEGATIVE);
 
-    return result;
+    return (uint8_t)result;
 }
 
 uint8_t and(Cpu* cpu, uint8_t src, uint8_t value)
@@ -332,8 +330,7 @@ void stop(Instruction* instr, Cpu* cpu, Memory* mem)
     // this instruction should enter STOP mode, leaving the CPU in stand-by until a button is pressed.
     // in GBC, it is used to switch between double speed and normal speed CPU modes.
 
-    cpu_advance_pc(cpu, 1);
-
+    cpu_advance_pc(cpu, OPERAND_BYTE);
     cpu->state = CPU_STOPPED;
 }
 
@@ -478,6 +475,32 @@ void ld_h_n(Instruction* instr, Cpu* cpu, Memory* mem)
 
 void daa(Instruction* instr, Cpu* cpu, Memory* mem)
 {
+    uint8_t adjustment = IS_FLAG_SET(FLAG_CARRY) ? 0x60 : 0x00;
+    adjustment = IS_FLAG_SET(FLAG_HALFCARRY) ? adjustment | 0x06 : adjustment;
+
+    if (!IS_FLAG_SET(FLAG_NEGATIVE))
+    {
+        if ((cpu->a & 0x0F) > 0x09) adjustment |= 0x06;
+        if ((cpu->a > 0x99)) {
+            adjustment |= 0x60;
+            SET_FLAG(FLAG_CARRY);
+        }
+
+        cpu->a += adjustment;
+    }
+    else
+    {
+        cpu->a -= adjustment;
+    }
+
+    CLEAR_FLAG(FLAG_HALFCARRY);
+
+    if (cpu->a == 0)
+        SET_FLAG(FLAG_ZERO);
+    else
+        CLEAR_FLAG(FLAG_ZERO);
+
+    /*
     int8_t adjustment = 0;
 
     if (IS_FLAG_SET(FLAG_NEGATIVE))
@@ -503,7 +526,7 @@ void daa(Instruction* instr, Cpu* cpu, Memory* mem)
 
     cpu->a = (uint8_t)result;
 
-    CLEAR_FLAG(FLAG_HALFCARRY);
+    CLEAR_FLAG(FLAG_HALFCARRY);*/
 }
 
 void jr_z_e(Instruction* instr, Cpu* cpu, Memory* mem)
@@ -757,9 +780,7 @@ void ld_at_hl_l(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, g
 
 void halt(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    /**
-     * TODO: implement this after interrupts
-     */
+    cpu->state = CPU_HALTED;
 }
 
 void ld_at_hl_a(Instruction* instr, Cpu* cpu, Memory* mem) { memory_write(mem, get_hl(cpu), cpu->a); }
@@ -945,10 +966,7 @@ void call_nz_nn(Instruction* instr, Cpu* cpu, Memory* mem)
     }
 }
 
-void push_bc(Instruction* instr, Cpu* cpu, Memory* mem)
-{
-    cpu_push(cpu, mem, get_bc(cpu));
-}
+void push_bc(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_bc(cpu)); }
 
 void add_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = add(cpu, cpu->a, instr->operand); }
 
@@ -980,7 +998,6 @@ void jp_z_nn(Instruction* instr, Cpu* cpu, Memory* mem)
 
 void cb_n(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    // to be implemented
     // instr->operand = next opcode
     // no need to advance PC
 
@@ -1058,7 +1075,7 @@ void ret_c(Instruction* instr, Cpu* cpu, Memory* mem)
 
 void reti(Instruction* instr, Cpu* cpu, Memory* mem)
 {
-    // after implementing interrupts, set IME to 1
+    cpu->ime = 1;
     cpu_ret(cpu, mem);
 }
 
@@ -1114,19 +1131,20 @@ void rst_20(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x00
 void add_sp_n(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     int8_t operand = (int8_t)instr->operand;
-    if ((cpu->sp & 0x000F) + (operand & 0x0F) > 0x000F)
+    uint16_t result = cpu->sp + operand;
+    if (((cpu->sp ^ operand) ^ result) & (1 << 4))
         SET_FLAG(FLAG_HALFCARRY);
     else
         CLEAR_FLAG(FLAG_HALFCARRY);
     
-    if ((cpu->sp & 0x00FF) + operand > 0x00FF)
+    if (((cpu->sp ^ operand) ^ result) & (1 << 8))
         SET_FLAG(FLAG_CARRY);
     else
         CLEAR_FLAG(FLAG_CARRY);
 
     CLEAR_FLAG(FLAG_ZERO | FLAG_NEGATIVE);
 
-    cpu->sp += operand;
+    cpu->sp = result;
 }
 
 void jp_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->pc = get_hl(cpu); }
@@ -1143,7 +1161,7 @@ void pop_af(Instruction* instr, Cpu* cpu, Memory* mem) { set_af(cpu, cpu_pop(cpu
 
 void ldh_a_at_c(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, 0xFF00 + cpu->c); }
 
-void di(Instruction* instr, Cpu* cpu, Memory* mem) { /* implement after interrupts */ }
+void di(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->ime = 0; }
 
 void push_af(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_push(cpu, mem, get_af(cpu)); }
 
@@ -1154,26 +1172,27 @@ void rst_30(Instruction* instr, Cpu* cpu, Memory* mem) { cpu_call(cpu, mem, 0x00
 void ld_hl_sp_plus_n(Instruction* instr, Cpu* cpu, Memory* mem)
 {
     int8_t operand = (int8_t)instr->operand;
-    if ((cpu->sp & 0x000F) + (operand & 0x0F) > 0x0F)
+    uint16_t result = cpu->sp + operand;
+    if (((cpu->sp ^ operand ^ result)) & (1 << 4))
         SET_FLAG(FLAG_HALFCARRY);
     else
         CLEAR_FLAG(FLAG_HALFCARRY);
 
-    if ((cpu->sp & 0x00FF) + (operand & 0xFF) > 0xFF)
+    if (((cpu->sp ^ operand ^ result)) & (1 << 8))
         SET_FLAG(FLAG_CARRY);
     else
         CLEAR_FLAG(FLAG_CARRY);
 
     CLEAR_FLAG(FLAG_ZERO | FLAG_NEGATIVE);
 
-    set_hl(cpu, cpu->sp + operand);
+    set_hl(cpu, result);
 }
 
 void ld_sp_hl(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->sp = get_hl(cpu); }
 
 void ld_a_at_nn(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->a = memory_read(mem, instr->operand16); }
 
-void ei(Instruction* instr, Cpu* cpu, Memory* mem) { /* implement after interrupts */ }
+void ei(Instruction* instr, Cpu* cpu, Memory* mem) { cpu->ime = 1; }
 
 void cp_a_n(Instruction* instr, Cpu* cpu, Memory* mem) { cp(cpu, cpu->a, instr->operand); }
 
@@ -1196,7 +1215,7 @@ const Instruction instructions[0x100] = {
     { "DEC C",          4,  OPERAND_NONE, PC_ADVANCE, .handle = dec_c },
     { "LD C, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_c_n },
     { "RRCA",           4,  OPERAND_NONE, PC_ADVANCE, .handle = rrca },
-    { "STOP n",         4,  OPERAND_NONE, PC_ADVANCE, .handle = stop },
+    { "STOP n",         4,  OPERAND_BYTE, PC_MANUAL, .handle = stop },
     { "LD DE, nn",     12,  OPERAND_WORD, PC_ADVANCE, .handle = ld_de_nn },
     { "LD [DE], A",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ld_at_de_a },
     { "INC DE",         8,  OPERAND_NONE, PC_ADVANCE, .handle = inc_de },
@@ -1425,7 +1444,7 @@ const Instruction instructions[0x100] = {
     { "LDH A, [C]",     8,  OPERAND_NONE, PC_ADVANCE, .handle = ldh_a_at_c },
     { "DI",             4,  OPERAND_NONE, PC_ADVANCE, .handle = di },
     { "UNKNOWN",        0,  OPERAND_NONE, PC_MANUAL,  .handle = NULL },
-    { "PUSH AF",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_hl },
+    { "PUSH AF",       16,  OPERAND_NONE, PC_ADVANCE, .handle = push_af },
     { "OR A, n",        8,  OPERAND_BYTE, PC_ADVANCE, .handle = or_a_n },
     { "RST $30",       16,  OPERAND_NONE, PC_ADVANCE, .handle = rst_30 },
     { "LD HL, SP+n",   12,  OPERAND_BYTE, PC_ADVANCE, .handle = ld_hl_sp_plus_n },
@@ -1440,7 +1459,7 @@ const Instruction instructions[0x100] = {
 
 void execute(Cpu* cpu, Memory* mem, uint8_t byte)
 {
-    if (byte < 0 || byte > 0x100)
+    if (byte >= 0x100)
         return;
 
     Instruction instruction = instructions[byte];
@@ -1460,7 +1479,7 @@ void execute(Cpu* cpu, Memory* mem, uint8_t byte)
 
     instruction.handle(&instruction, cpu, mem);
 
-    if (instructions->pc_mode == PC_ADVANCE && instruction.operand_size != OPERAND_NONE)
+    if (instruction.pc_mode == PC_ADVANCE && instruction.operand_size != OPERAND_NONE)
         cpu_advance_pc(cpu, instruction.operand_size);
 
     cpu_add_ticks(cpu, instruction.base_ticks);
