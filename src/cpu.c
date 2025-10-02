@@ -32,16 +32,6 @@ void cpu_reset(Cpu* cpu)
     cpu->ime = 1;
 }
 
-void cpu_add_ticks(Cpu* cpu, uint8_t ticks)
-{
-    cpu->current_ticks += ticks;
-}
-
-void cpu_advance_pc(Cpu* cpu, uint8_t value)
-{
-    cpu->pc += value;
-}
-
 void cpu_push(Cpu* cpu, Memory* mem, uint16_t value)
 {
     cpu->sp -= 2;

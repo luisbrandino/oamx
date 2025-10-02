@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "mbc.h"
 
+#define JOYP_ADDR 0xFF00
 #define DIV_ADDR 0xFF04
 #define TIMA_ADDR 0xFF05
 #define TMA_ADDR 0xFF06
@@ -33,7 +34,10 @@ typedef struct Memory {
     uint8_t io[0x80];   
     uint8_t hram[0x7F];
 
+    uint8_t joypad_state;
+
     // I/O registers
+    uint8_t joyp;
     uint8_t div;
     uint8_t tima;
     uint8_t tma;

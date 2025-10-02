@@ -5,6 +5,7 @@
 #include "../inc/display.h"
 #include "../inc/memory.h"
 #include "../inc/timer.h"
+#include "../inc/input.h"
 #include "../inc/cpu.h"
 #include "../inc/ppu.h"
 #include "../inc/rom.h"
@@ -36,6 +37,8 @@ int main(int argc, char **argv)
     uint64_t next_frame_time = get_time_us() + FRAME_DURATION;
     while (ctx.is_running)
     {
+        update_key_states(mem);
+
         uint32_t frame_ticks = 0;
         while (frame_ticks < TICKS_PER_FRAME)
         {

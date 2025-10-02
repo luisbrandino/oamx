@@ -6,6 +6,9 @@ void memory_write(Memory* mem, uint16_t addr, uint8_t value)
 {
     switch (addr)
     {
+        case JOYP_ADDR:
+            mem->joyp = (mem->joyp & 0x0F) | (value & 0x30) | 0xC0;
+            break;
         case DIV_ADDR:
             mem->div = value;
             break;
@@ -121,6 +124,14 @@ uint8_t memory_read(Memory* mem, uint16_t addr)
 {
     switch (addr)
     {
+        case JOYP_ADDR:
+            if (!(mem->joyp & 0x20))
+                return (mem->joypad_state >> 4) | (1 << 4);
+
+            if (!(mem->joyp & 0x10))
+                return (mem->joypad_state & 0x0F) | (1 << 5);
+
+            return mem->joyp | 0xFF;
         case DIV_ADDR:
             return mem->div;
         case TIMA_ADDR:
@@ -197,9 +208,6 @@ uint8_t memory_read(Memory* mem, uint16_t addr)
     }
     else if (addr <= 0xFF7F)
     {
-        if (addr == 0xFF00)
-            return 0xCF; 
-
         return mem->io[addr - 0xFF00];
     }
     else if (addr <= 0xFFFE)
@@ -226,13 +234,13 @@ uint16_t memory_read16(Memory* mem, uint16_t addr)
 
 void memory_reset(Memory* mem)
 {
+    mem->joypad_state = 0xFF;
     mem->div = 0x18;
     mem->lcdc = 0x91;
     mem->stat = 0x85;
     mem->bgp = 0xFC;
     mem->IF = 0xE1;
 }
-
 
 Memory* memory_init()
 {

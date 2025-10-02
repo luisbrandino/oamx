@@ -1431,9 +1431,6 @@ const Instruction instructions[0x100] = {
 
 void execute(Cpu* cpu, Memory* mem, uint8_t byte)
 {
-    if (byte >= 0x100)
-        return;
-
     Instruction instruction = instructions[byte];
 
     instruction.operand = 0;
@@ -1449,9 +1446,10 @@ void execute(Cpu* cpu, Memory* mem, uint8_t byte)
             break;
     };
 
-    instruction.handle(&instruction, cpu, mem);
+    if (instruction.handle != NULL)
+        instruction.handle(&instruction, cpu, mem);
 
-    if (instruction.pc_mode == PC_ADVANCE && instruction.operand_size != OPERAND_NONE)
+    if (instruction.pc_mode == PC_ADVANCE)
         cpu_advance_pc(cpu, instruction.operand_size);
 
     cpu_add_ticks(cpu, instruction.base_ticks);

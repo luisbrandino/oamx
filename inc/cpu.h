@@ -54,11 +54,12 @@ static inline void set_de(Cpu* cpu, uint16_t value) { cpu->d = value >> 8 & 0xFF
 static inline uint16_t get_hl(Cpu* cpu) { return ((uint16_t)cpu->h << 8) | cpu->l; }
 static inline void set_hl(Cpu* cpu, uint16_t value) { cpu->h = value >> 8 & 0xFF; cpu->l = value & 0xFF; }
 
+static inline void cpu_add_ticks(Cpu* cpu, uint8_t ticks) { cpu->current_ticks += ticks; }
+static inline void cpu_advance_pc(Cpu* cpu, uint8_t value) { cpu->pc += value; }
+
 Cpu* cpu_init();
 void cpu_reset(Cpu* cpu);
 
-void cpu_add_ticks(Cpu* cpu, uint8_t ticks);
-void cpu_advance_pc(Cpu* cpu, uint8_t value);
 void cpu_push(Cpu* cpu, Memory* mem, uint16_t value);
 uint16_t cpu_pop(Cpu* cpu, Memory* mem);
 void cpu_call(Cpu* cpu, Memory* mem, uint16_t addr);
