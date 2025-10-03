@@ -723,9 +723,6 @@ const CBInstruction cb_instructions[0x100] = {
 
 void execute_cb_instruction(Cpu* cpu, Memory* mem, uint8_t byte)
 {
-    if (byte >= 0x100)
-        return;
-
     CBInstruction cb_instruction = cb_instructions[byte];
     cb_instruction.handle(cpu, mem);
 

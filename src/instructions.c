@@ -1,5 +1,6 @@
 #include "../inc/instructions.h"
 #include "../inc/cb_instructions.h"
+#include "../inc/platform.h"
 
 // --- HELPERS --- //
 
@@ -1446,10 +1447,10 @@ void execute(Cpu* cpu, Memory* mem, uint8_t byte)
             break;
     };
 
-    if (instruction.handle != NULL)
+    if (likely(instruction.handle != NULL))
         instruction.handle(&instruction, cpu, mem);
 
-    if (instruction.pc_mode == PC_ADVANCE)
+    if (likely(instruction.pc_mode == PC_ADVANCE))
         cpu_advance_pc(cpu, instruction.operand_size);
 
     cpu_add_ticks(cpu, instruction.base_ticks);

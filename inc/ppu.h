@@ -4,25 +4,32 @@
 #include <stdint.h>
 #include "memory.h"
 
-#define SCREEN_WIDTH 160
+#define SCREEN_WIDTH  160
 #define SCREEN_HEIGHT 144
 
-#define OAM_TICKS 80
-#define RAM_TICKS 172
+#define OAM_TICKS    80
+#define VRAM_TICKS   172
 #define HBLANK_TICKS 204
 #define VBLANK_TICKS 456
 
 #define LCDC_SPRITE_ENABLED (1 << 1)
 #define LCDC_WINDOW_ENABLED (1 << 5)
 
-#define SIGNED_TILE_INDEX 0
+#define SIGNED_TILE_INDEX   0
 #define UNSIGNED_TILE_INDEX 1
+
+#define STAT_LYC_FLAG            (1 << 2)
+
+#define STAT_INT_LYC_ENABLE      (1 << 6)
+#define STAT_INT_HBLANK_ENABLE   (1 << 3)
+#define STAT_INT_VBLANK_ENABLE   (1 << 4)
+#define STAT_INT_OAM_ENABLE      (1 << 5)
 
 typedef enum {
     HBLANK,
     VBLANK,
     OAM,
-    RAM
+    VRAM
 } PpuMode;
 
 typedef enum {

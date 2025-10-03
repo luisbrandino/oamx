@@ -1,8 +1,16 @@
 #include <stdlib.h>
 #include <string.h>
+
 #include "../inc/interrupts.h"
+#include "../inc/platform.h"
 #include "../inc/display.h"
 #include "../inc/ppu.h"
+
+static inline void request_stat_interrupt_if_enabled(Memory* mem, uint8_t mask)
+{
+    if (mem->stat & mask)
+        request_interrupt(mem, LCD_STAT_INTERRUPT);
+}
 
 static Sprite read_sprite(Memory* mem, uint8_t index)
 {
@@ -35,7 +43,7 @@ static uint8_t get_tile_pixel_from_vram(Memory* mem, uint16_t tile_base_address,
     return pixel & 0x03;
 }
 
-static uint8_t get_sprite_pixel(Ppu* ppu, Memory* mem, uint16_t tile_index, uint8_t y, uint8_t x, uint8_t flags)
+static uint8_t ppu_get_sprite_pixel(Ppu* ppu, Memory* mem, uint16_t tile_index, uint8_t y, uint8_t x, uint8_t flags)
 {
     y = (flags & (1 << 6)) ? (ppu->sprite_height - 1) - y : y;
     x = (flags & (1 << 5)) ? 7 - x : x;
@@ -86,7 +94,7 @@ static void ppu_draw_window(Ppu* ppu, Memory* mem)
     if (mem->ly < window_y)
         return;
 
-    if (mem->ly == window_y)
+    if (mem->ly >= window_y)
         ppu->window_line_counter = 0;
 
     uint8_t screen_rendered = 0;
@@ -141,14 +149,8 @@ static void ppu_oam_search(Ppu* ppu, Memory* mem)
     }
 }
 
-static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
-{   
-    ppu_draw_background(ppu, mem);
-    ppu_draw_window(ppu, mem);
-
-    if (!(mem->lcdc & LCDC_SPRITE_ENABLED))
-        return;
-
+static void ppu_draw_sprites(Ppu* ppu, Memory* mem)
+{
     ppu_oam_search(ppu, mem);
     Sprite* pixel_sprite_map[SCREEN_WIDTH] = { NULL };
     for (uint8_t i = 0; i < ppu->visible_sprite_count; i++)
@@ -163,7 +165,7 @@ static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
             if (screen_x < 0 || screen_x >= SCREEN_WIDTH)
                 continue;
 
-            uint8_t color = get_sprite_pixel(ppu, mem, sprite->tile, line_in_sprite, px, sprite->flags);
+            uint8_t color = ppu_get_sprite_pixel(ppu, mem, sprite->tile, line_in_sprite, px, sprite->flags);
             if (color == 0)
                 continue;
 
@@ -190,22 +192,118 @@ static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
     }
 }
 
-static inline void update_stat_to_ppu_mode(Ppu* ppu, Memory* mem)
+static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
+{   
+    ppu_draw_background(ppu, mem);
+    ppu_draw_window(ppu, mem);
+
+    if (!(mem->lcdc & LCDC_SPRITE_ENABLED))
+        return;
+
+    ppu_draw_sprites(ppu, mem);
+}
+
+static inline void ppu_enter_mode(Ppu* ppu, Memory* mem, PpuMode mode)
 {
+    ppu->mode = mode;
     mem->stat = ((mem->stat & 0xFC) | ppu->mode);
 }
 
-static void update_lyc_flag(Ppu* ppu, Memory* mem)
+static void ppu_update_lyc_flag(Ppu* ppu, Memory* mem)
 {
-    if (mem->ly == mem->lyc)
+    if (mem->ly != mem->lyc)
     {
-        mem->stat |= 0x04;
-        if (mem->stat & (1 << 6))
-            request_interrupt(mem, LCD_STAT_INTERRUPT); 
+        mem->stat &= (uint8_t)~(STAT_LYC_FLAG);
+        return;
     }
-    else
+
+    mem->stat |= STAT_LYC_FLAG;
+    if (mem->stat & STAT_INT_LYC_ENABLE)
+        request_interrupt(mem, LCD_STAT_INTERRUPT);
+}
+
+uint8_t ppu_is_lcd_off(Ppu* ppu, Memory* mem)
+{
+    uint8_t lcd_off = mem->lcdc & 0x80 == 0;
+
+    if (lcd_off)
     {
-        mem->stat &= 0xFB;
+        ppu->lcd_on = 0;
+        ppu->mode = HBLANK;
+        return lcd_off;
+    }
+
+    if (!lcd_off && !ppu->lcd_on)
+    {
+        ppu->lcd_on = 1;
+        ppu->ticks = 0;
+    }
+
+    return lcd_off;
+}
+
+void ppu_handle_oam(Ppu* ppu, Memory* mem)
+{
+    if (ppu->ticks >= OAM_TICKS)
+    {
+        ppu->ticks -= OAM_TICKS;
+        ppu_enter_mode(ppu, mem, VRAM);
+    }
+}
+
+void ppu_handle_vram(Ppu* ppu, Memory* mem)
+{
+    if (ppu->ticks >= VRAM_TICKS)
+    {
+        ppu->ticks -= VRAM_TICKS;
+        ppu_enter_mode(ppu, mem, HBLANK);
+
+        if (mem->ly < SCREEN_HEIGHT)
+            ppu_draw_scanline(ppu, mem);
+
+        request_stat_interrupt_if_enabled(mem, STAT_INT_HBLANK_ENABLE);
+    }
+}
+
+void ppu_handle_hblank(Ppu* ppu, Memory* mem)
+{
+    if (ppu->ticks >= HBLANK_TICKS)
+    {
+        ppu->ticks -= HBLANK_TICKS;
+        mem->ly++;
+
+        ppu_update_lyc_flag(ppu, mem);
+
+        if (mem->ly == SCREEN_HEIGHT)
+        {
+            request_interrupt(mem, VBLANK_INTERRUPT);
+            ppu_enter_mode(ppu, mem, VBLANK);
+            display_render(ppu);
+            request_stat_interrupt_if_enabled(mem, STAT_INT_VBLANK_ENABLE);
+        }
+        else
+        {
+            ppu_enter_mode(ppu, mem, OAM);
+            request_stat_interrupt_if_enabled(mem, STAT_INT_OAM_ENABLE);
+        }
+    }
+}
+
+void ppu_handle_vblank(Ppu* ppu, Memory* mem)
+{
+    if (ppu->ticks >= VBLANK_TICKS)
+    {
+        ppu->ticks -= VBLANK_TICKS;
+        mem->ly++;
+
+        ppu_update_lyc_flag(ppu, mem);
+
+        if (mem->ly >= (SCREEN_HEIGHT + 9))
+        {   
+            mem->ly = 0;
+            ppu_enter_mode(ppu, mem, OAM);
+            request_stat_interrupt_if_enabled(mem, STAT_INT_OAM_ENABLE);
+        }
     }
 }
 
@@ -213,101 +311,16 @@ void ppu_step(Ppu* ppu, Memory* mem, uint8_t ticks)
 {
     ppu->ticks += ticks;
 
-    if ((mem->lcdc & 0x80) == 0)
-    {
-        ppu->lcd_on = 0;
-        ppu->mode = HBLANK;
+    if (unlikely(ppu_is_lcd_off(ppu, mem)))
         return;
-    }
-
-    if (!ppu->lcd_on)
-    {
-        ppu->lcd_on = 1;
-
-        ppu->ticks = 0;
-        ppu->sprite_height = 8;
-        ppu->visible_sprite_count = 0;
-
-        return;
-    }
 
     switch (ppu->mode)
     {
-        case OAM:
-            if (ppu->ticks >= OAM_TICKS)
-            {
-                ppu->ticks -= OAM_TICKS;
-                ppu->mode = RAM;
-                update_stat_to_ppu_mode(ppu, mem);
-            }
-            break;
-        
-        case RAM:
-            if (ppu->ticks >= RAM_TICKS)
-            {
-                ppu->ticks -= RAM_TICKS;
-                ppu->mode = HBLANK;
-
-                update_stat_to_ppu_mode(ppu, mem);
-
-                if (mem->ly < 144)
-                    ppu_draw_scanline(ppu, mem);
-
-                if (mem->stat & (1 << 3))
-                    request_interrupt(mem, LCD_STAT_INTERRUPT);
-            }
-            break;
-
-        case HBLANK:
-            if (ppu->ticks >= HBLANK_TICKS)
-            {
-                ppu->ticks -= HBLANK_TICKS;
-                mem->ly++;
-
-                update_lyc_flag(ppu, mem);
-
-                if (mem->ly == SCREEN_HEIGHT)
-                {
-                    request_interrupt(mem, VBLANK_INTERRUPT);
-                    ppu->mode = VBLANK;
-                    update_stat_to_ppu_mode(ppu, mem);
-
-                    display_render(ppu);
-                    
-                    if (mem->stat & (1 << 4))
-                        request_interrupt(mem, LCD_STAT_INTERRUPT);
-                }
-                else
-                {
-                    ppu->mode = OAM;
-                    update_stat_to_ppu_mode(ppu, mem);
-
-                    if (mem->stat & (1 << 5))
-                        request_interrupt(mem, LCD_STAT_INTERRUPT);
-                }
-
-            }
-            break;
-
-        case VBLANK:
-            if (ppu->ticks >= VBLANK_TICKS)
-            {
-                ppu->ticks -= VBLANK_TICKS;
-                mem->ly++;
-
-                update_lyc_flag(ppu, mem);
-
-                if (mem->ly >= 153)
-                {
-                    mem->ly = 0;
-                    ppu->mode = OAM;
-                    update_stat_to_ppu_mode(ppu, mem);
-
-                    if (mem->stat & (1 << 5))
-                        request_interrupt(mem, LCD_STAT_INTERRUPT);
-                }
-            }
-            break;
+        case OAM:       return ppu_handle_oam(ppu, mem);
+        case VRAM:      return ppu_handle_vram(ppu, mem);
+        case HBLANK:    return ppu_handle_hblank(ppu, mem);
+        case VBLANK:    return ppu_handle_vblank(ppu, mem);
+        nodefault
     }
 }
 
