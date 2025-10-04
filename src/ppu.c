@@ -94,7 +94,7 @@ static void ppu_draw_window(Ppu* ppu, Memory* mem)
     if (mem->ly < window_y)
         return;
 
-    if (mem->ly >= window_y)
+    if (mem->ly == window_y)
         ppu->window_line_counter = 0;
 
     uint8_t screen_rendered = 0;
@@ -197,10 +197,8 @@ static void ppu_draw_scanline(Ppu* ppu, Memory* mem)
     ppu_draw_background(ppu, mem);
     ppu_draw_window(ppu, mem);
 
-    if (!(mem->lcdc & LCDC_SPRITE_ENABLED))
-        return;
-
-    ppu_draw_sprites(ppu, mem);
+    if (likely(mem->lcdc & LCDC_SPRITE_ENABLED))
+        ppu_draw_sprites(ppu, mem);
 }
 
 static inline void ppu_enter_mode(Ppu* ppu, Memory* mem, PpuMode mode)
@@ -224,7 +222,7 @@ static void ppu_update_lyc_flag(Ppu* ppu, Memory* mem)
 
 uint8_t ppu_is_lcd_off(Ppu* ppu, Memory* mem)
 {
-    uint8_t lcd_off = mem->lcdc & 0x80 == 0;
+    uint8_t lcd_off = mem->lcdc & LCDC_LCD_ENABLED == 0;
 
     if (lcd_off)
     {

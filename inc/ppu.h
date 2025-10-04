@@ -14,6 +14,7 @@
 
 #define LCDC_SPRITE_ENABLED (1 << 1)
 #define LCDC_WINDOW_ENABLED (1 << 5)
+#define LCDC_LCD_ENABLED    (1 << 7)
 
 #define SIGNED_TILE_INDEX   0
 #define UNSIGNED_TILE_INDEX 1
