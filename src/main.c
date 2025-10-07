@@ -2,6 +2,7 @@
 #include <assert.h>
 
 #include "../inc/interrupts.h"
+#include "../inc/core_api.h"
 #include "../inc/display.h"
 #include "../inc/memory.h"
 #include "../inc/timer.h"
@@ -9,6 +10,14 @@
 #include "../inc/cpu.h"
 #include "../inc/ppu.h"
 #include "../inc/rom.h"
+
+#ifdef __cplusplus
+extern void debugger_main(void);
+extern void debugger_stop(void);
+#else
+extern void debugger_main(void);
+extern void debugger_stop(void);
+#endif
 
 #define GB_CLOCK_SPEED    4194304
 #define GB_FPS            59.73
@@ -34,10 +43,24 @@ int main(int argc, char **argv)
     assert(argc > 1);
     load_rom(mem, argv[1]);
 
+    uint8_t debugger_attached = 1; // always true for now
+
+    if (debugger_attached)
+    {
+        GB_sync_snapshot(cpu, mem);
+        debugger_main();
+    }
+
     uint64_t next_frame_time = get_time_us() + FRAME_DURATION;
     while (ctx.is_running)
     {
         update_key_states(mem);
+
+        if (debugger_attached)
+        {
+            //GB_apply_pending_deltas(cpu, mem);
+            GB_sync_snapshot(cpu, mem);
+        }
 
         uint32_t frame_ticks = 0;
         while (frame_ticks < TICKS_PER_FRAME)
@@ -61,6 +84,11 @@ int main(int argc, char **argv)
         next_frame_time += FRAME_DURATION;
 
         display_poll(&ctx);
+    }
+
+    if (debugger_attached)
+    {
+        debugger_stop();
     }
 
     return 0;
