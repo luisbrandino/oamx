@@ -1,7 +1,7 @@
 # <center>oamx</center>
 _A Game Boy emulator written in C, focused on accuracy, transparency, and hardware-level correctness._
 
-## Project status
+## Project Status
 
 oamx is an experimental Game Boy emulator still under active development. It is not feature-complete and should be considered unstable. Hardware behavior is implemented with a focus on accuracy and clarity of code rather than performance or user experience.  
 Bugs, visual glitches, and unexpected behavior are to be expected.
