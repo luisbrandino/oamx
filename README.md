@@ -26,13 +26,11 @@ The following ROMs are known to boot and run to a playable state:
 - The Legend of Zelda: Link’s Awakening (with minor visual artifacts);
 - Tetris.
 
-<table>
-  <tr>
-    <td align="center"><img src="./assets/kirbys.gif" width="200px"/></td>
-    <td align="center"><img src="./assets/zelda.gif" width="200px"/></td>
-    <td align="center"><img src="./assets/tetris.gif" width="200px"/></td>
-  </tr>
-</table>
+<p float="left">
+    <img src="./assets/kirbys.gif" width="250px" height="250px"/>
+    <img src="./assets/zelda.gif" width="250px" height="250px"/>
+    <img src="./assets/tetris.gif" width="250px" height="250px"/>
+</p>
 
 ## **Debugger**
 
