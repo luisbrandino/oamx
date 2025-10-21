@@ -31,11 +31,12 @@ typedef struct {
 } GB_cpu_snapshot_t;
 
 typedef struct {
+    uint8_t vram[0x2000];
+} GB_memory_snapshot_t;
 
-} GB_memory_state_t;
 
 uint8_t GB_get_cpu_snapshot(GB_cpu_snapshot_t* cpu_snapshot_out);
-GB_memory_state_t GB_get_memory_state(void);
+uint8_t GB_get_memory_snapshot(GB_memory_snapshot_t* memory_snapshout_out);
 
 //void GB_apply_cpu_state(GB_cpu_state_t cpu_state);
 //void GB_apply_memory_state(GB_memory_state_t memory_state);

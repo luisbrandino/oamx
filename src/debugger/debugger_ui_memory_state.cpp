@@ -9,7 +9,5 @@ void debugger_ui_render_memory_state(Debugger* debugger)
 
 void debugger_ui_render_oam_state(Debugger* debugger)
 {
-    ImGui::Begin("OAM");
 
-    ImGui::End();
 }

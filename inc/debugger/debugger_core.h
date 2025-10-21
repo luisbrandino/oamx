@@ -9,8 +9,8 @@
 #include "core_api.h"
 
 typedef struct {
-    uint8_t a;
     GB_cpu_snapshot_t cpu_snapshot;
+    GB_memory_snapshot_t memory_snapshot;
 } GB_state_t;
 
 typedef struct {

@@ -1,7 +1,10 @@
 #include "../inc/core_api.h"
 #include <stdio.h>
+#include <stdatomic.h>
+#include <string.h>
 
 GB_cpu_snapshot_t cpu_snapshot;
+GB_memory_snapshot_t memory_snapshot;
 atomic_bool syncing;
 
 uint8_t GB_get_cpu_snapshot(GB_cpu_snapshot_t* cpu_snapshot_out)
@@ -12,6 +15,18 @@ uint8_t GB_get_cpu_snapshot(GB_cpu_snapshot_t* cpu_snapshot_out)
     }
 
     *cpu_snapshot_out = cpu_snapshot;
+
+    return 1;
+}
+
+uint8_t GB_get_memory_snapshot(GB_memory_snapshot_t* memory_snapshot_out)
+{
+    if (atomic_load(&syncing))
+    {
+        return 0;
+    }
+
+    *memory_snapshot_out = memory_snapshot;
 
     return 1;
 }
@@ -31,6 +46,8 @@ void GB_sync_snapshot(Cpu* cpu, Memory* mem)
     cpu_snapshot.pc = cpu->pc;
     cpu_snapshot.sp = cpu->sp;
     cpu_snapshot.ime = cpu->ime;
+
+    memcpy(memory_snapshot.vram, mem->vram, 0x2000);
 
     atomic_store(&syncing, 0);
 }

@@ -38,6 +38,7 @@ void debugger_core_loop(Debugger* debugger)
     if (debugger->gb_state)
     {
         GB_get_cpu_snapshot(&debugger->gb_state->cpu_snapshot);
+        GB_get_memory_snapshot(&debugger->gb_state->memory_snapshot);
     }
 
     debugger_window_loop(debugger);
