@@ -26,7 +26,7 @@ The following ROMs are known to boot and run to a playable state:
 - The Legend of Zelda: Link’s Awakening (with minor visual artifacts);
 - Tetris.
 
-![Kirby's Dream Land running on oamx](./assets/kirbys.gif?raw=true =300x) ![The Legend of Zelda: Link’s Awakening Land running on oamx](./assets/zelda.gif?raw=true =300x) ![Tetris running on oamx](./assets/tetris.gif?raw=true =300x)
+![Kirby's Dream Land running on oamx](https://github.com/luisbrandino/oamx/blob/main/assets/kirbys.gif =300x) ![The Legend of Zelda: Link’s Awakening Land running on oamx](https://github.com/luisbrandino/oamx/blob/main/assets/zelda.gif =300x) ![Tetris running on oamx](https://github.com/luisbrandino/oamx/blob/main/assets/tetris.gif =300x)
 
 ## **Debugger**
 
