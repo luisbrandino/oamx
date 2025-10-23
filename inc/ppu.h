@@ -12,9 +12,12 @@
 #define HBLANK_TICKS 204
 #define VBLANK_TICKS 456
 
-#define LCDC_SPRITE_ENABLED (1 << 1)
-#define LCDC_WINDOW_ENABLED (1 << 5)
-#define LCDC_LCD_ENABLED    (1 << 7)
+#define LCDC_BACKGROUND_ENABLED (1 << 0)
+#define LCDC_SPRITE_ENABLED     (1 << 1)
+#define LCDC_WINDOW_ENABLED     (1 << 5)
+#define LCDC_LCD_ENABLED        (1 << 7)
+
+#define LCDC_SPRITE_HEIGHT       (1 << 2)
 
 #define SIGNED_TILE_INDEX   0
 #define UNSIGNED_TILE_INDEX 1

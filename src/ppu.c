@@ -117,6 +117,9 @@ static void ppu_draw_window(Ppu* ppu, Memory* mem)
 
 static void ppu_draw_background(Ppu* ppu, Memory* mem)
 {
+    if (!(mem->lcdc & LCDC_BACKGROUND_ENABLED))
+        return;
+
     uint8_t scx = mem->scx;
     uint8_t scy = mem->scy;
 
@@ -133,7 +136,7 @@ static void ppu_draw_background(Ppu* ppu, Memory* mem)
 static void ppu_oam_search(Ppu* ppu, Memory* mem)
 {
     uint8_t lcdc = mem->lcdc;
-    ppu->sprite_height = (lcdc & (1 << 2)) ? 16 : 8;
+    ppu->sprite_height = (lcdc & LCDC_SPRITE_HEIGHT) ? 16 : 8;
     ppu->visible_sprite_count = 0;
 
     for (uint8_t i = 0; i < 40; i++)
